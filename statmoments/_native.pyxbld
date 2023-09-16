@@ -1,0 +1,7 @@
+
+from setup import make_ext
+
+def make_setup_args():
+  return {
+    'script_args' : ['--verbose'],
+    }
