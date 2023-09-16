@@ -1,5 +1,5 @@
-# use_debug, use_pyrex = False, False  # Deployment through wheels
-use_debug, use_pyrex = False, True   # cython code is compiled on import
+use_debug, use_pyrex = False, False  # Deployment through wheels
+# use_debug, use_pyrex = False, True   # cython code is compiled on import
 # use_debug, use_pyrex = True, False   # cython code is interpreted
 
 assert not (use_debug and use_pyrex), "Flags use_debug and use_pyrex cannot be True simultaneously"
