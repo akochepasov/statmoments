@@ -19,9 +19,9 @@ can be used to answer a variety of questions, such as:
 
 These statistical methods are used in medical and bioinformatics research, astrophysics, cryptography, seismology, market predictions, and many more where the input data is measured in hundreds of gigabytes.
 Some of the benefits of streaming computation include:
-Real-time insights: The computation can be used to find real-time insights from the data, such as identifying trends and detecting anomalies.
-Reduced latency: It can help reduce the latency of data processing, as the data is processed as generated and then discarded. This is important for applications where time is critical, such as financial trading and online gaming.
-Scalability: Streaming computation can handle large volumes of data. This is important for research that generates large amounts of data, such as cryptoanalysis and astrophysics.
+ - Real-time insights: The computation can be used to find real-time insights from the data, such as identifying trends and detecting anomalies.
+ - Reduced latency: It can help reduce the latency of data processing, as the data is processed as generated and then discarded. This is important for applications where time is critical, such as financial trading and online gaming.
+ - Scalability: Streaming computation can handle large volumes of data. This is important for research that generates large amounts of data, such as cryptoanalysis and astrophysics.
 
 ## Examples
 Examples can be found in the examples and tests directories.
