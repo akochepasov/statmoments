@@ -12,7 +12,7 @@ def bivar_ttest():
   traces0[::2, 2] = (3 * traces0[::2, 3]/2 + 20).astype(np.int8)
   traces1[::2, 2] = (3 * traces1[::2, 3]/2 + 20).astype(np.int8)
 
-  # Generate sorting classification (hypotheses)
+  # Generate sorting classification (data partitioning hypotheses)
   cl0 = [[0, 1, i % 2, (i+1) % 2] for i in range(len(traces0))]
   cl1 = [[1, 0, i % 2, (i+1) % 2] for i in range(len(traces1))]
 
