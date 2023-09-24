@@ -5,29 +5,27 @@ import statmoments
 
 
 def bivar_ttest():
-  # Generate input data
-  traces0 = np.random.normal(0, 7, (100, 5)).astype(np.int8)
-  traces1 = np.random.normal(0, 7, (100, 5)).astype(np.int8)
-  # Insert different distribution into some points of one batch
-  traces0[:, 2:4] = np.random.normal(50, 15, (100, 2)).astype(np.int8)
-
-  # Generate sorting classification (hypotheses how to split the input data)
-  # 1 assumes data as is, 2 assumes the data is interlaced
-  cl0 = [(0, i % 2) for i in range(len(traces0))]
-  cl1 = [(1, i % 2) for i in range(len(traces1))]
-
-  tr_len = len(traces0[0])  # N features or points in the input waveforms
-  cl_len = len(cl0[0])      # N hypotheses how to split input waveforms
-
-  # Merge everything in into single data batches
-  input_batch = np.vstack((traces0, traces1))
-  cl_batch = cl0 + cl1
+  # Input data parameters
+  tr_count = 100   # M input waveforms
+  tr_len = 5       # N features or points in the input waveforms
+  cl_len = 2       # L hypotheses how to split input waveforms
 
   # Create engine
-  uveng = statmoments.Univar(tr_len, cl_len, moment=4, acc_min_count=3)
+  uveng = statmoments.Univar(tr_len, cl_len, moment=4)
+
+  # Generate input data
+  wforms = np.random.normal(0, 7, (2, tr_count, tr_len)).astype(np.int8)
+  # Insert different distribution into some points of one batch
+  wforms[0][:, 2:4] = np.random.normal(50, 15, (100, 2)).astype(np.int8)
+  wforms = wforms.reshape(2 * tr_count, tr_len)
+
+  # Generate sorting classification (hypotheses how to split the input data)
+  # 1 assumes data as is, 2 assumes the data waveforms are interlaced
+  cl0 = [(0, i % 2) for i in range(tr_count)]
+  cl1 = [(1, i % 2) for i in range(tr_count)]
 
   # Process input
-  uveng.update(input_batch, cl_batch)
+  uveng.update(wforms, cl0 + cl1)
 
   # All generator returned data must be copied out
   # since it points to an internal buffer

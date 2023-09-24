@@ -4,9 +4,16 @@ import statmoments
 
 
 def bivar_ttest():
+  # Input data parameters
+  tr_count = 100   # M input waveforms
+  tr_len = 5       # N features or points in the input waveforms
+  cl_len = 4       # L hypotheses how to split input waveforms
+  # Create engine
+  bveng = statmoments.Bivar(tr_len, cl_len, moment=4)
+
   # Input data
-  traces0 = np.random.normal(0, 10, (100, 5)).astype(np.int8)
-  traces1 = np.random.normal(0, 10, (100, 5)).astype(np.int8)
+  traces0 = np.random.normal(0, 10, (tr_count, tr_len)).astype(np.int8)
+  traces1 = np.random.normal(0, 10, (tr_count, tr_len)).astype(np.int8)
   # Insert correlation in one batch for some points for some splits
   traces0[:,   0] = (2 * traces0[:,   1]   + 10).astype(np.int8)
   traces0[::2, 2] = (3 * traces0[::2, 3]/2 + 20).astype(np.int8)
@@ -15,12 +22,6 @@ def bivar_ttest():
   # Generate sorting classification (data partitioning hypotheses)
   cl0 = [[0, 1, i % 2, (i+1) % 2] for i in range(len(traces0))]
   cl1 = [[1, 0, i % 2, (i+1) % 2] for i in range(len(traces1))]
-
-  cl_len = len(cl0[0])      # Number of hypotheses how to split input data
-  tr_len = len(traces0[0])  # Number of features or points in the input waveforms
-
-  # Create engine
-  bveng = statmoments.Bivar(tr_len, cl_len, moment=4, acc_min_count=3, normalize=True)
 
   # Process input
   bveng.update(traces0, cl0)
