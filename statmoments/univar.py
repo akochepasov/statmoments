@@ -21,7 +21,7 @@ class UnivarCMD(_CliCommon):
   def save_results(self, engine, dirname, meta={}):
     super().save_results(engine, dirname, meta)
 
-    # 1D: cl-mom-01
+    # 1D: cl-mom-[01]
     name_pttrn = 'mom{{i:0{}d}}_{{m}}_{{}}'.format(len(str(engine.classifiers_len)))
     fname_pttrn = os_path.join(dirname, name_pttrn)
     for m in range(1, engine.moment + 1):
