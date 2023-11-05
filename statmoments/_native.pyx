@@ -271,7 +271,7 @@ def calc_central_moment_general(raw, ave, n, k, l, i, j):
 
 @cython.cfunc
 @cython.locals(n=cython.double, lm=cython.int, rm=cython.int, i=cython.int)
-def calc_central_moments(raw, ave, std, n, lm, rm, i, j):
+def calc_central_moments(raw, ave, n, lm, rm, i, j):
   """Optimized for moments (1, 1) and (2, 2). For others calc_central_moment_general is called"""
 
   inv_n = 1.0 / n
@@ -468,18 +468,17 @@ class _bivar_sum_base(_AccBase):
         raw0 = acc0[1:acc0.shape[0]-1, 1:].reshape(ma, tr_len, ma, tr_len)
         raw1 = acc1[1:acc1.shape[0]-0, 1:].reshape(ma, tr_len, ma, tr_len)
 
-        sd0, sd1 = None, None
         for i in range(tr_len):
           j, k = _block_index(i, tr_len)
           if n0 >= min_cnt:
             m10 = 1.0/n0 * acc0[0, 1: 1 + tr_len]
-            retm[0, jj, k] = calc_central_moments(raw0, m10, sd0, n0, lm, rm, i, j)
+            retm[0, jj, k] = calc_central_moments(raw0, m10, n0, lm, rm, i, j)
           else:
             retm[0, jj, k] = np.zeros(j.stop-j.start)
 
           if n1 >= min_cnt:
             m11 = 1.0/n1 * acc1[0, 1: 1 + tr_len]
-            retm[1, jj, k] = calc_central_moments(raw1, m11, sd1, n1, lm, rm, i, j)
+            retm[1, jj, k] = calc_central_moments(raw1, m11, n1, lm, rm, i, j)
           else:
             retm[1, jj, k] = np.zeros(j.stop-j.start)
 
