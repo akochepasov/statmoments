@@ -1,6 +1,6 @@
 # cython: language_level=3
 
-from scipy.linalg cimport cython_blas
+cimport scipy.linalg.cython_blas as cython_blas
 from libc.math cimport sqrt
 from libc.stdint cimport intptr_t, uintmax_t
 
