@@ -8,6 +8,7 @@ from Cython.Build import cythonize
 
 
 if sys.version_info < (3, 6, 0):
+  # It should work even with 2.7, just never really tested
   raise RuntimeError("statmoments requires Python 3.6 or later")
 
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -15,7 +16,7 @@ USE_CYTHON = os.path.isfile(os.path.join(basedir, "statmoments/_native.pyx"))
 
 
 def make_ext(modname, filename):
-  # This function is used for in-place pyximport compilation over pyxbld
+  # This function required for in-place pyximport compilation over pyxbld
   compile_args, link_args = [], []
 
   if False:
@@ -60,7 +61,6 @@ def get_version():
 
 #  setuptools.setup(
 #    cmdclass = {'build_ext' : build_ext_cupy},
-
 
 kwargs = {}
 
