@@ -180,7 +180,7 @@ class Test_stat(unittest.TestCase):
     n0, n1 = 987, 1234
     traces0 = np.random.randint(0, 256, (n0, tr_len))
     # Insert different distribution into some points of one batch
-    traces0[:, 2:4] = np.random.normal(30, 10, (n0, 2)).astype(traces0.dtype)
+    traces0[:, 2:4] = np.random.normal(35, 10, (n0, 2)).astype(traces0.dtype)
     traces1 = np.random.randint(0, 256, (n1, tr_len))
     engines = all_engines_tt_1d(tr_len, cl_len, moment=max_moment)
 
