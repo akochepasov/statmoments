@@ -72,8 +72,6 @@ def main():
   setuptools.setup(
       name='statmoments',
       packages = ['statmoments'],
-      author='Anton Kochepasov',
-      author_email='akss@me.com',
       version=get_version(),
       ext_modules=extensions,
       **kwargs)
