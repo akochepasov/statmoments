@@ -71,6 +71,7 @@ def main():
   extensions = cythonize('statmoments/_native' + ext) if USE_CYTHON else extensions
   setuptools.setup(
       name='statmoments',
+      packages = ['statmoments'],
       author='Anton Kochepasov',
       author_email='akss@me.com',
       version=get_version(),
