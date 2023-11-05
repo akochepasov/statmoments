@@ -70,8 +70,6 @@ def main():
   extensions = [make_ext("statmoments._native", 'statmoments/_native' + ext)]
   extensions = cythonize('statmoments/_native' + ext) if USE_CYTHON else extensions
   setuptools.setup(
-      name='statmoments',
-      packages = ['statmoments'],
       version=get_version(),
       ext_modules=extensions,
       **kwargs)
