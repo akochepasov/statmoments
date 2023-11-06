@@ -332,7 +332,7 @@ class _CliCommon(object):
 
     parser.epilog = """Examples:
       Find t-test statistics from data.h5 for a range [0:200):
-      > %(prog)s -i data.h5 -s 0:200
+      > %(prog)s -i data.h5 -r 0:300
       Find t-test statistics for 3rd statistical moment:
       > %(prog)s -i data.h5 -m 3"""
 
