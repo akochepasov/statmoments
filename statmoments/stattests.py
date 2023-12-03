@@ -15,7 +15,7 @@ def ttests(engine, moment=None, dim=None, equal_var=False):
   test_dim = dim    if dim    is not None else engine.dim
   test_mom = moment if moment is not None else engine.moment // 2
 
-  if engine.moment // 2 < np.max(test_mom):
+  if engine.moment < 2 or engine.moment // 2 < np.max(test_mom):
     raise ValueError("The engine cannot provide required statistical moments.")
 
   mom_conv = [
