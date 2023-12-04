@@ -2,7 +2,7 @@ import gc
 from itertools import product
 from os import urandom as _urandom
 from binascii import b2a_hex
-from timeit import default_timer as timer
+from time import perf_counter
 
 import numpy as np
 
@@ -49,33 +49,33 @@ class EngineFactory(object):
 def benchmark(benchset):
   number, repeat = 1, 1
 
-  print('{:12}{:30}{:>7}{:>8}{:>9}{:>8}{:>8}{:>11}{:>10}{:>7}'.format(
+  print('{:12}{:30}{:>7}{:>8}{:>9}{:>8}{:>10}{:>11}{:>10}{:>7}'.format(
     'Kernel', 'Implementation', 'MB', 'tr_cnt', 'tr_len', 'cl_cnt', 'tr/sec', 'avg_update', 'avg_ttest', 'time'))
 
   for name, params in benchset:
     for engine_factory, tr_count, tr_len, cl_count in product(*params):
-      count, proc_times, ttest_times = 0, [], []
+      update_times, ttest_times = [], []
       assert repeat > 0
       for _ in range(repeat):
         traces, classifiers = engine_factory.create_data(tr_count, tr_len, cl_count)
         engine = engine_factory.create_engine(tr_len, cl_count)
         for _ in range(number):
-          count += 1
-          start = timer()
+          start = perf_counter()
           engine.update(traces, classifiers)  # Streaming: layout and accumulator
-          proc_times.append(timer() - start)
+          update_times.append(perf_counter() - start)
 
-          start = timer()
+          start = perf_counter()
           for _ in ttests(engine):  # On-demand: t-tests
             pass
-          ttest_times.append(timer() - start)
+          ttest_times.append(perf_counter() - start)
 
-      total_time = sum(proc_times) + sum(ttest_times)
+      total_time = sum(update_times) + sum(ttest_times)
       max_mom = str(engine.moment) * 2
+      traces_count = tr_count * number
       kname = '{}(m{})'.format(type(engine._impl).__name__, max_mom)
-      print("{:12}{:30}{:7d}{:8d}{:9d}{:8d}{:>8.1f}{:>11.3f}{:>10.3f}{:>7.1f}".format(
-        name, kname, engine.memory_size >> 20, tr_count, tr_len, cl_count,
-                     count / total_time, min(proc_times) / count, min(ttest_times) / count, total_time))
+      print("{:12}{:30}{:7d}{:8d}{:9d}{:8d}{:>10.1f}{:>11.4f}{:>10.4f}{:>7.1f}".format(
+        name, kname, engine.memory_size >> 20, traces_count, tr_len, cl_count, traces_count / total_time,
+                     sum(update_times) / traces_count, sum(ttest_times) / traces_count, total_time))
       # Force garbage collection
       del traces
       del engine
