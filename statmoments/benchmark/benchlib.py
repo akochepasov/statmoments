@@ -50,7 +50,7 @@ def benchmark(benchset):
   number, repeat = 1, 1
 
   print('{:12}{:30}{:>7}{:>8}{:>9}{:>8}{:>10}{:>11}{:>10}{:>7}'.format(
-    'Kernel', 'Implementation', 'MB', 'tr_cnt', 'tr_len', 'cl_cnt', 'tr/sec', 'avg_update', 'avg_ttest', 'time'))
+    'Kernel', 'Implementation', 'MB', 'tr_cnt', 'tr_len', 'cl_cnt', 'tr/sec', 'avg_upd_ms', 'avg_tt_ms', 'time_s'))
 
   for name, params in benchset:
     for engine_factory, tr_count, tr_len, cl_count in product(*params):
@@ -73,9 +73,9 @@ def benchmark(benchset):
       max_mom = str(engine.moment) * 2
       traces_count = tr_count * number
       kname = '{}(m{})'.format(type(engine._impl).__name__, max_mom)
-      print("{:12}{:30}{:7d}{:8d}{:9d}{:8d}{:>10.1f}{:>11.4f}{:>10.4f}{:>7.1f}".format(
+      print("{:12}{:30}{:7d}{:8d}{:9d}{:8d}{:>10.1f}{:>11.3f}{:>10.3f}{:>7.1f}".format(
         name, kname, engine.memory_size >> 20, traces_count, tr_len, cl_count, traces_count / total_time,
-                     sum(update_times) / traces_count, sum(ttest_times) / traces_count, total_time))
+                     sum(update_times) * 1000 / traces_count, sum(ttest_times) * 1000 / traces_count, total_time))
       # Force garbage collection
       del traces
       del engine
