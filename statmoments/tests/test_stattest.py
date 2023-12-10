@@ -79,8 +79,8 @@ def find_maxtt(traces_gen, engines, iter_cnt=10):
       for e2d in engines:
           e2d.update(traces, classifiers)
 
-  res = [np.nanmax(np.abs(np.vstack([tt.copy() for e2d in engines for tt in statmoments.stattests.ttests(e2d)])), axis=1)]
-  return res
+  tt_gen = [tt.copy() for e2d in engines for tt in statmoments.stattests.ttests(e2d)]
+  return [np.nanmax(np.abs(np.vstack(tt_gen)), axis=1)]
 
 
 def ensure_ttest_1d(engines, traces0, traces1):
@@ -110,7 +110,7 @@ def ensure_ttest_1d(engines, traces0, traces1):
       return
 
     # t-test orders 3 and higher
-    for m in range(3, max_moment+1):
+    for m in range(3, max_moment + 1):
       trstd0 = (meanfree(traces0) / np.std(traces0, axis=0))**m
       trstd1 = (meanfree(traces1) / np.std(traces1, axis=0))**m
       exp_tt = wttest(trstd0, trstd1)
@@ -388,8 +388,8 @@ class Test_stat(unittest.TestCase):
     # tt 3-4 ord
     std = [np.sqrt(mm2[0]), np.sqrt(mm2[1])]
     for i in [3, 4]:
-      sm20 = (mom_3pass(traces0, 2 * i) - mom_3pass(traces0, i) ** 2) / std[0] ** (2*i)
-      sm21 = (mom_3pass(traces1, 2 * i) - mom_3pass(traces1, i) ** 2) / std[1] ** (2*i)
+      sm20 = (mom_3pass(traces0, 2 * i) - mom_3pass(traces0, i) ** 2) / std[0] ** (2 * i)
+      sm21 = (mom_3pass(traces1, 2 * i) - mom_3pass(traces1, i) ** 2) / std[1] ** (2 * i)
       sm10 = mom_3pass(traces0, i, True)
       sm11 = mom_3pass(traces1, i, True)
       tt_exp1 = (sm10 - sm11) / np.sqrt(sm20 / (n0 - 1) + sm21 / (n1 - 1))

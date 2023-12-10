@@ -11,6 +11,7 @@ if sys.version_info < (3, 6, 0):
   # It should work even with 2.7, just never really tested
   raise RuntimeError("statmoments requires Python 3.6 or later")
 
+kwargs = {}
 basedir = os.path.abspath(os.path.dirname(__file__))
 USE_CYTHON = os.path.isfile(os.path.join(basedir, "statmoments/_native.pyx"))
 
@@ -61,8 +62,6 @@ def get_version():
 
 #  setuptools.setup(
 #    cmdclass = {'build_ext' : build_ext_cupy},
-
-kwargs = {}
 
 
 def main():

@@ -87,7 +87,7 @@ def uni2bivar(data, lm=1, rm=1, normalize=True):
   sd = 1
   if normalize and (lm + rm) >= 3:
     sd = np.std(data, axis=0, ddof=0)
-  res = [triu_flatten(np.outer((tr/sd)**lm, (tr/sd)**rm)) for tr in meanfree(data)]
+  res = [triu_flatten(np.outer((tr / sd) ** lm, (tr / sd) ** rm)) for tr in meanfree(data)]
   return res
 
 
