@@ -357,14 +357,16 @@ class _bivar_sum_base(_AccBase):
     # Approximate memory consumption for 1 classifier, 1 moment:
     # 10k: 5GB,  20k: 15GB,  50k: 80GB
     exp_traces = 50  # Expected number of traces in the input batch
-    lytsz      = exp_traces * moment * tr_len
-    accssz     = cl_len * (moment * tr_len ** 2)
+    bufsz      = 3 * tr_len
+    lytsz      = exp_traces * (moment * tr_len + 1)
+    accssz     = cl_len * (moment * tr_len + 1) ** 2
     ttsz       = 2 * 2 * tr_len * tr_len // 2
-    return (lytsz + accssz) * np.finfo(acc_dtype).bits // 8 + ttsz * 8
+    return (lytsz + accssz + bufsz) * np.finfo(acc_dtype).bits // 8 + ttsz * 8
 
   def memory_size(self):
     mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
-    mem_ttest = 0  # included in mem_class
+    # ttest memory included in mem_class or std normalization computed one line at a time
+    mem_ttest = 0  if self.moment < 3 else self.trace_len
     return mem_class + mem_ttest * 8
 
   def update(self, traces, classifiers):
@@ -645,14 +647,17 @@ class bivar_cntr(_AccBase):
     acc_dtype  = np.float64
     lytsz      = exp_traces * moment * tr_len
     accs1dsz   = cl_len * 2 * tr_len
-    accs2dsz   = cl_len * 2 * moment * tr_len * moment * tr_len
+    accs2dsz   = cl_len * 2 * (moment * tr_len) ** 2
     ttsz       = 2 * 2 * tr_len * (tr_len + 1) // 2
     clssz      = cl_len * 2
-    return (lytsz + accs1dsz + accs2dsz) * np.finfo(acc_dtype).bits // 8 + ttsz * 8 + clssz * 4
+    # One additional square for std normalization for moments > 2
+    ttstdsz    = 0  if moment < 3 else tr_len + tr_len ** 2
+    return (lytsz + accs1dsz + accs2dsz) * np.finfo(acc_dtype).bits // 8 + (ttsz + ttstdsz) * 8 + clssz * 4
 
   def memory_size(self):
     mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
-    mem_ttest = self._accs1d.shape[2] ** 2 // 2 * 4
+    # ttest memory included in mem_class or one additional square for std normalization
+    mem_ttest = 0  if self.moment < 3 else self.trace_len + self.trace_len ** 2
     return mem_class + mem_ttest * 8
 
   def update(self, traces, classifiers):
@@ -806,14 +811,11 @@ class _BivarNpassBase(_AccBase):
   @staticmethod
   def estimate_mem_size(tr_len, cl_len=1, moment=2):
     mem_class = tr_len * tr_len + 2 * 2 * tr_len * (tr_len + 1) // 2
-    return mem_class * cl_len * 8
+    return mem_class * 8
 
   def memory_size(self):
-    def _sz_helper(inst):
-      return sum(v.nbytes for v in inst if isinstance(v, np.ndarray))
-    mem_class = sum(map(_sz_helper, [vars(self).values()]))
-    mem_ttest = 0  # included in mem_class
-    return mem_class + mem_ttest * 8
+    mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
+    return mem_class
 
   def update(self, traces, classifiers):
     self.total_count += len(traces)
@@ -858,6 +860,19 @@ class _BivarNpassBase(_AccBase):
 
 
 class bivar_2pass(_BivarNpassBase):
+  @staticmethod
+  def estimate_mem_size(tr_len, cl_len=1, moment=2):
+    mem_base  = _BivarNpassBase.estimate_mem_size(tr_len, cl_len, moment)
+    # One additional square for std normalization for moments > 2
+    mem_ttstd = 0  if moment < 3 else tr_len + tr_len ** 2
+    return mem_base + mem_ttstd * 8
+
+  def memory_size(self):
+    mem_base = super().memory_size()
+    # One additional square for std normalization for moments > 2
+    mem_ttstd = 0  if self.moment < 3 else self.trace_len + self.trace_len ** 2
+    return mem_base + mem_ttstd * 8
+
   def _comoments(self, moments, normalize):
     C = self._tmpsq
     tr_len, cl_len = self.trace_len, self.cls.shape[1]
@@ -887,6 +902,20 @@ class bivar_txtbk(_BivarNpassBase):
     super().__init__(trace_len, classifier_len, **kwargs)
     m, n = self.acc_min_count, trace_len
     self._tri = np.empty((m, n * (n + 1) // 2))  # Handle the triangle dynamically
+
+  @staticmethod
+  def estimate_mem_size(tr_len, cl_len=1, moment=2):
+    exp_traces = 10  # Expected number of traces in the input batch
+    mem_base  = _BivarNpassBase.estimate_mem_size(tr_len, cl_len, moment)
+    mem_tri   = exp_traces * tr_len * (tr_len + 1) // 2
+    mem_ttstd = 0  if moment < 3 else tr_len + tr_len ** 2
+    return mem_base + (mem_tri  + mem_ttstd)* 8
+
+  def memory_size(self):
+    mem_base = super().memory_size()
+    # One additional square for std normalization for moments > 2
+    mem_ttstd = 0  if self.moment < 3 else self.trace_len + self.trace_len ** 2
+    return mem_base + mem_ttstd * 8
 
   def _realloc_tri(self, m):
     if len(self._tri) < m:

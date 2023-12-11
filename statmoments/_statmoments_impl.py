@@ -196,9 +196,11 @@ class Bivar(_BaseImpl):
     return bivar_cntr if use_central else bivar_sum_detrend
 
   @classmethod
-  def estimate_mem_size(cls, tr_len, cl_len, moment=2, use_central=None):
+  def estimate_mem_size(cls, tr_len, cl_len, moment=2, use_central=None, **kwargs):
     """Return an coarse-grained amount of memory, required by the processing kernel."""
-    impl_type = cls._fit_kernel(tr_len, cl_len, moment, use_central)
+    impl_type = kwargs.pop('kernel', None)
+    if impl_type is None:
+      impl_type = cls._fit_kernel(tr_len, cl_len, moment, use_central)
     return impl_type.estimate_mem_size(tr_len, cl_len, moment)
 
 
