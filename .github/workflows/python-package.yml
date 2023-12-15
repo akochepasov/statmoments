@@ -43,5 +43,5 @@ jobs:
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. Line is 160 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=160 --statistics
+        # exit-zero treats all errors as warnings. Line is 120 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics

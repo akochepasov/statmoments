@@ -7,19 +7,11 @@ import statmoments
 import statmoments.benchmark.benchlib as bl
 
 
-def is_vtk_installed():
-  try:
-    import vtk
-    return True
-  except ModuleNotFoundError:
-    return False
-
-
 def bivar_benchmark(debug_run=False):
   params = bl.make_trace_ushort, bl.make_hypotheses, statmoments.Bivar
 
   kernels = [statmoments.bivar_sum, statmoments.bivar_2pass, statmoments.bivar_txtbk]
-  if is_vtk_installed():
+  if bl.is_vtk_installed():
     kernels.append(statmoments.bivar_vtk)
 
   engines = {(k.__name__, m): bl.EngineFactory(*params, kernel=k, moment=m)
@@ -29,19 +21,19 @@ def bivar_benchmark(debug_run=False):
   print(' ===== Bivar benchmark ==== ')
   print('\nVarying trace lengths.')
   cl_len = 1
-  tr_len, tr_cnt = (50, 61) if debug_run else (500, 1000)
-  bl.benchmark([(f"bivar_m{moment}", [[engine], [5 * tr_cnt], [n * tr_len], [cl_len]])
-                for n in [1, 2, 4, 10, 20]
+  tr_len, tr_cnt = (50, 300) if debug_run else (500, 5000)
+  bl.benchmark([(f"bivar_m{moment}", [[engine], [tr_cnt], [n * tr_len], [cl_len]])
+                for n in [1, 2, 5, 10, 20]
                 for (impl, moment), engine in engines.items()
                 if not (impl == "bivar_txtbk" and n >= 4)])
 
   print('\nVarying trace count.')
   cl_len = 1
-  tr_len, tr_cnt = (50, 61) if debug_run else (1000, 5000)
+  tr_len, tr_cnt = (50, 60) if debug_run else (1000, 5000)
   bl.benchmark([(f"bivar_m{moment}", [[engine], [n * tr_cnt], [tr_len], [cl_len]])
                 for n in [1, 2, 5, 10, 20]
                 for (impl, moment), engine in engines.items()
-                if not (impl == "bivar_txtbk" and n >= 5)])
+                if not (impl == "bivar_txtbk" and n >= 4)])
 
 
 def run_benchmark():

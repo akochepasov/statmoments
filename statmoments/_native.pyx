@@ -11,9 +11,9 @@ import numpy as np
 import scipy.linalg.blas as scipy_blas
 from scipy.special import binom
 
-cython.declare(USE_VTK=cython.int)
+cython.declare(USE_VTK = cython.int)
 USE_VTK = 0
-cython.declare(USE_GPU=cython.int)
+cython.declare(USE_GPU = cython.int)
 USE_GPU = 0
 
 #if USE_GPU:
@@ -66,8 +66,8 @@ def dsbmv(A, x, y, alpha = 1.0, beta = 0.0, uplo = b'L', k = 0, lda = 1, incx = 
 
   if cython.compiled:
     cython_blas.dsbmv(cython.address(uplo), cython.address(n), cython.address(k),
-                      cython.address(alpha), cython.address(A[0]), cython.address(lda), cython.address(x[0]),
-                      cython.address(incx),
+                      cython.address(alpha), cython.address(A[0]), cython.address(lda),
+                      cython.address(x[0]), cython.address(incx),
                       cython.address(beta), cython.address(y[0]), cython.address(incy))
   else:
     A = A.reshape(len(A), -1)
@@ -109,9 +109,8 @@ def ssyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   # !!! uplo 'L' and 'U' mixed up !!!
   if cython.compiled:
     cython_blas.ssyrk(cython.address(uplo), cython.address(trans), cython.address(n), cython.address(k),
-                      cython.address(alpha),
-                      cython.address(A[0, 0]), cython.address(lda), cython.address(beta), cython.address(C[0, 0]),
-                      cython.address(ldc))
+                      cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
+                      cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
   else:
     scipy_blas.ssyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 1 if uplo != b'U' else 0, 1)
 
@@ -134,9 +133,8 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   if cython.compiled:
     #    if not USE_GPU:
     cython_blas.dsyrk(cython.address(uplo), cython.address(trans), cython.address(n), cython.address(k),
-                      cython.address(alpha),
-                      cython.address(A[0, 0]), cython.address(lda), cython.address(beta), cython.address(C[0, 0]),
-                      cython.address(ldc))
+                      cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
+                      cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
   #    else:
   #      cython.declare(device = cython.int, uplo_ = cython.int, trns_ = cython.int)
   #      cython.declare(devPrtA = cython.p_double, devPrtC = cython.p_double)
@@ -175,11 +173,11 @@ def dgemm(a, b, c, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
   #assert (b.shape[1] if transb == b'N' else b.shape[0]) == k
 
   if cython.compiled:
-    cython_blas.dgemm(cython.address(transa), cython.address(transb), cython.address(m), cython.address(n),
-                      cython.address(k), cython.address(alpha),
-                      cython.address(a[0, 0]), cython.address(lda), cython.address(b[0, 0]), cython.address(ldb),
-                      cython.address(beta),
-                      cython.address(c[0, 0]), cython.address(ldc))
+    cython_blas.dgemm(cython.address(transa), cython.address(transb),
+                      cython.address(m), cython.address(n), cython.address(k),
+                      cython.address(alpha), cython.address(a[0, 0]), cython.address(lda),
+                      cython.address(b[0, 0]), cython.address(ldb),
+                      cython.address(beta), cython.address(c[0, 0]), cython.address(ldc))
   else:
     scipy_blas.dgemm(alpha, a.T, b.T, beta, c.T, 1 if transa != b'N' else 0, 1 if transb != b'N' else 0, 1)
 
@@ -203,7 +201,7 @@ class _AccBase(object):
     self.acc_min_count = kwargs.pop('acc_min_count', 10)
 
   @staticmethod
-  def estimate_mem_size(trace_len, classifier_len=1, moment=2):
+  def estimate_mem_size(tr_len, cl_len=1, moment=2):
     raise NotImplementedError("Must be implemented in an inherited class")
 
   def memory_size(self):
@@ -260,16 +258,18 @@ def _rmoms2cmoms(M, moment, tmpbuf):
 
 def calc_central_moment_general(raw, ave, n, k, l, i, j):
   """ Calculate co-moments for any available moments """
-  ave_i = ave[i]
-  ave_j = ave[j]
+  ave_i = ave[i]  # i is a scalar
+  ave_j = ave[j]  # j is a slice such that indices (j, j) add diagonal!
 
   inv_n = 1.0 / n
   com = (-1) ** (k + l) * (1 - k - l) * n * ave_i ** k * ave_j ** l
 
   for p in range(2, k + 1):
-    com += (-1) ** (k + l - p) * binom(k, p) * raw[0, :, p - 2, :][i, i] * ave_j ** l * ave_i ** (k - p)
+    edge_val = raw[0, :, p - 2, :][i, i]
+    com += (-1) ** (k + l - p) * binom(k, p) * edge_val * ave_j ** l * ave_i ** (k - p)
   for q in range(2, l + 1):
-    com += (-1) ** (k + l - q) * binom(l, q) * raw[0, :, q - 2, :][j, j].diagonal() * ave_i ** k * ave_j ** (l - q)
+    edge_val = raw[0, :, q - 2, :][j, j].diagonal()
+    com += (-1) ** (k + l - q) * binom(l, q) * edge_val * ave_i ** k * ave_j ** (l - q)
   for p in range(1, k + 1):
     for q in range(1, l + 1):
       Mpq = raw[p - 1, :, q - 1, :][i, j] if p <= q else raw[q - 1, :, p - 1, :][j, i]
@@ -282,53 +282,51 @@ def calc_central_moments(raw, ave, n, lm, rm, i, j):
   """Optimized for moments (1, 1) and (2, 2). For others calc_central_moment_general is called"""
 
   inv_n = 1.0 / n
-  ave_i = ave[i]  # i is a scalar number
+  ave_i = ave[i]  # i is a scalar
   ave_j = ave[j]  # j is a slice such that indices (j, j) add diagonal!
 
   # Expressions for conversions raw moments to central moments in the
   # Horner representation generated with sympy
-  if lm + rm == 2:  # E(X Y)
-    M_11 = raw[0, :, 0, :]
+  if False:
+    pass # Helps formatting for all cases
+  elif lm == 1 and rm == 1:  # E(X Y)
+    M_11 = raw[0, :, 0, :]   # 0
     m = M_11[i, j] * inv_n - ave_i * ave_j
-  elif lm + rm == 3:  # E(XX Y)
-    M_11 = raw[0, :, 0, :]  # 0
+  elif lm + rm == 3:         # E(XX Y)
+    M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
     m = ave_j * (2 * n * ave_i * ave_j - 2 * M_11[i, j]) \
         - ave_i * M_11[j, j].diagonal() \
         + M_12[i, j]
     m *= inv_n
   elif lm == 2 and rm == 2:  # E(XX YY)
-    M_11 = raw[0, :, 0, :]  # 0
+    M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
-    M_22 = raw[1, :, 1, :]  # 1
+    M_22 = raw[1, :, 1, :]   # 1
     m = ave_i * (ave_i * M_11[j, j].diagonal() - 2 * M_12[i, j]) \
         + ave_j * (4 * ave_i * M_11[i, j] + ave_j * (M_11[i, i] - 3 * n * ave_i * ave_i) - 2 * M_12[j, i]) \
         + M_22[i, j]
     m *= inv_n
   elif lm == 4 and rm == 4:  # E(XXXX YYYY)
-    M_11 = raw[0, :, 0, :]  # 0
+    M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
     M_13 = raw[0, :, 2, :]
     M_14 = raw[0, :, 3, :]
-    M_22 = raw[1, :, 1, :]  # 1
+    M_22 = raw[1, :, 1, :]   # 1
     M_23 = raw[1, :, 2, :]
     M_24 = raw[1, :, 3, :]
-    M_33 = raw[2, :, 2, :]  # 2
+    M_33 = raw[2, :, 2, :]   # 2
     M_34 = raw[2, :, 3, :]
-    M_44 = raw[3, :, 3, :]  # 3
+    M_44 = raw[3, :, 3, :]   # 3
     m = ave_i * (-4 * M_34[i, j] + ave_i * (6 * M_24[i, j] + ave_i * (M_13[j, j].diagonal() * ave_i - 4 * M_14[i, j]))) \
         + ave_j * (-4 * M_34[j, i] \
-                   + ave_i * (16 * M_33[i, j] + ave_i * (
-            -24 * M_23[i, j] + ave_i * (-4 * M_12[j, j].diagonal() * ave_i + 16 * M_13[i, j]))) \
-                   + ave_j * (6 * M_24[j, i] \
-                              + ave_i * (-24 * M_23[j, i] + ave_i * (
-                36 * M_22[i, j] + ave_i * ((6 * ave_i) * M_11[j, j].diagonal() - 24 * M_12[i, j]))) \
-                              + ave_j * (-4 * M_14[j, i] \
-                                         + ave_i * (
-                                             16 * M_13[j, i] + ave_i * (16 * ave_i * M_11[i, j] - 24 * M_12[j, i])) \
-                                         + ave_j * (M_13[i, i] \
-                                                    + ave_i * (-4 * M_12[i, i] + ave_i * (
-                        6 * M_11[i, i] - 7 * n * ave_i ** 2)))))) \
+                     + ave_i * (16 * M_33[i, j] + ave_i * (-24 * M_23[i, j] + ave_i * (-4 * M_12[j, j].diagonal() * ave_i + 16 * M_13[i, j]))) \
+                     + ave_j * (6 * M_24[j, i] \
+                                  + ave_i * (-24 * M_23[j, i] + ave_i * (36 * M_22[i, j] + ave_i * ((6 * ave_i) * M_11[j, j].diagonal() - 24 * M_12[i, j]))) \
+                                  + ave_j * (-4 * M_14[j, i] \
+                                               + ave_i * (16 * M_13[j, i] + ave_i * (16 * ave_i * M_11[i, j] - 24 * M_12[j, i])) \
+                                               + ave_j * (M_13[i, i] \
+                                                            + ave_i * (-4 * M_12[i, i] + ave_i * (6 * M_11[i, i] - 7* n * ave_i ** 2)))))) \
         + M_44[i, j]
     m *= inv_n
   else:
@@ -346,27 +344,29 @@ class _bivar_sum_base(_AccBase):
     self._dtype = kwargs.pop('acctype', np.float64)
 
     # Buffers for operations to avoid reallocations
-    self._buf = np.empty((3, trace_len), dtype=self._dtype)  # BLAS ops
+    self._buf    = np.empty((3, trace_len), dtype=self._dtype)  # BLAS ops buffer
     self._layout = np.empty((exp_traces, moment * trace_len + 1), dtype=self._dtype)
-    self._retm = np.empty((2, 2, trace_len * (trace_len + 1) // 2), dtype=np.float64)
+    self._retm   = np.empty((2, 2, trace_len * (trace_len + 1) // 2), dtype=np.float64)
 
     # Accumulators
     # acc0 is upper triangle of accs[:,:-1], acc1 is lower triangle of accs[:, 1:]
-    self._accs = np.zeros((classifier_len, moment * trace_len + 2, moment * trace_len + 1), dtype=self._dtype)
+    self._accs   = np.zeros((classifier_len, moment * trace_len + 2, moment * trace_len + 1), dtype=self._dtype)
 
   @staticmethod
-  def estimate_mem_size(trace_len, classifier_len=1, moment=2, acc_dtype=np.float64):
+  def estimate_mem_size(tr_len, cl_len=1, moment=2, acc_dtype=np.float64):
     # Approximate memory consumption for 1 classifier, 1 moment:
     # 10k: 5GB,  20k: 15GB,  50k: 80GB
     exp_traces = 50  # Expected number of traces in the input batch
-    lytsz = exp_traces * moment * trace_len
-    accssz = classifier_len * (moment * trace_len ** 2)
-    ttsz = 2 * 2 * trace_len * trace_len // 2
-    return (lytsz + accssz) * np.finfo(acc_dtype).bits // 8 + ttsz * 8
+    bufsz      = 3 * tr_len
+    lytsz      = exp_traces * (moment * tr_len + 1)
+    accssz     = cl_len * (moment * tr_len + 1) ** 2
+    ttsz       = 2 * 2 * tr_len * tr_len // 2
+    return (lytsz + accssz + bufsz) * np.finfo(acc_dtype).bits // 8 + ttsz * 8
 
   def memory_size(self):
     mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
-    mem_ttest = 0  # included in mem_class
+    # ttest memory included in mem_class or std normalization computed one line at a time
+    mem_ttest = 0  if self.moment < 3 else self.trace_len
     return mem_class + mem_ttest * 8
 
   def update(self, traces, classifiers):
@@ -637,19 +637,27 @@ class bivar_cntr(_AccBase):
     moment = self.moment
     self._accs1d = np.zeros((classifier_len, 2, trace_len), dtype=np.float64)
     self._accs2d = np.zeros((classifier_len, 2, moment, trace_len, moment, trace_len), dtype=np.float64)
-    self._layout = np.empty((10, moment, trace_len), dtype=np.float64)
+    self._layout = np.empty((50, moment, trace_len), dtype=np.float64)
     self._cls_count = np.zeros((classifier_len, 2), np.uint32)
     self._retm = np.empty((2, 2, trace_len * (trace_len + 1) // 2))
 
   @staticmethod
-  def estimate_mem_size(tr_len, classifier_len=1, moment=2):
-    #                   layout          acc_count                    accs1d                                             accs2d
-    mem_class = 10 * moment * tr_len + classifier_len * 2 + classifier_len * 2 * tr_len + classifier_len * 2 * moment * tr_len * moment * tr_len
-    return mem_class * classifier_len * 8
+  def estimate_mem_size(tr_len, cl_len=1, moment=2):
+    exp_traces = 50  # Expected number of traces in the input batch
+    acc_dtype  = np.float64
+    lytsz      = exp_traces * moment * tr_len
+    accs1dsz   = cl_len * 2 * tr_len
+    accs2dsz   = cl_len * 2 * (moment * tr_len) ** 2
+    ttsz       = 2 * 2 * tr_len * (tr_len + 1) // 2
+    clssz      = cl_len * 2
+    # One additional square for std normalization for moments > 2
+    ttstdsz    = 0  if moment < 3 else tr_len + tr_len ** 2
+    return (lytsz + accs1dsz + accs2dsz) * np.finfo(acc_dtype).bits // 8 + (ttsz + ttstdsz) * 8 + clssz * 4
 
   def memory_size(self):
     mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
-    mem_ttest = self._accs1d.shape[2] ** 2 // 2 * 4
+    # ttest memory included in mem_class or one additional square for std normalization
+    mem_ttest = 0  if self.moment < 3 else self.trace_len + self.trace_len ** 2
     return mem_class + mem_ttest * 8
 
   def update(self, traces, classifiers):
@@ -764,7 +772,7 @@ def _uni2bivar(traces, tmp, ret, m1, m2):
   n = cython.cast(cython.int, traces.shape[1])
   triuflatten, C = _triuflatten_gen(n), tmp
   for j in range(m):
-    dsyrk(traces[j, np.newaxis] ** m1, C, b'L', b'N', 1.0, 0.0)  # m1 == m2
+    dsyrk(traces[j, np.newaxis] ** m1, C, b'L', b'N', 1.0, 0.0)                               # m1 == m2
     if cython.compiled:
       ret[j, :] = triuflatten(C.base)
     else:
@@ -796,21 +804,18 @@ class _BivarNpassBase(_AccBase):
   def __init__(self, tr_len, cl_len, **kwargs):
     super().__init__(tr_len, cl_len, **kwargs)
     self.traces = np.empty((1, tr_len))[1:]
-    self.cls = np.asarray([bytearray(b'2')], dtype=np.uint8)[1:]  # 2 is non existing element
+    self.cls    = np.asarray([bytearray(b'2')], dtype=np.uint8)[1:]  # 2 is non existing element
     self._tmpsq = np.empty((tr_len, tr_len))  # Has to be square for syrk
-    self._retm = np.empty((2, 2, tr_len * (tr_len + 1) // 2))
+    self._retm  = np.empty((2, 2, tr_len * (tr_len + 1) // 2))
 
   @staticmethod
-  def estimate_mem_size(trace_len, classifier_len=1, moment=2):
-    mem_class = trace_len * trace_len + 4 * trace_len * (trace_len + 1) // 2
-    return mem_class * 8 * classifier_len
+  def estimate_mem_size(tr_len, cl_len=1, moment=2):
+    mem_class = tr_len * tr_len + 2 * 2 * tr_len * (tr_len + 1) // 2
+    return mem_class * 8
 
   def memory_size(self):
-    def _sz_helper(inst):
-      return sum(v.nbytes for v in inst if isinstance(v, np.ndarray))
-    mem_class = sum(map(_sz_helper, [vars(self).values()]))
-    mem_ttest = 0  # included in mem_class
-    return mem_class + mem_ttest * 8
+    mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
+    return mem_class
 
   def update(self, traces, classifiers):
     self.total_count += len(traces)
@@ -818,7 +823,7 @@ class _BivarNpassBase(_AccBase):
     tr_copy = np.asarray(traces, dtype=np.float64)
     cl_copy = np.asarray(classifiers, dtype=np.uint8)
     self.traces = np.vstack((self.traces, tr_copy))
-    self.cls = np.vstack((self.cls, cl_copy))
+    self.cls    = np.vstack((self.cls, cl_copy))
 
   def counts(self, i):
     c1 = sum(self.cls[:, i])
@@ -855,6 +860,19 @@ class _BivarNpassBase(_AccBase):
 
 
 class bivar_2pass(_BivarNpassBase):
+  @staticmethod
+  def estimate_mem_size(tr_len, cl_len=1, moment=2):
+    mem_base  = _BivarNpassBase.estimate_mem_size(tr_len, cl_len, moment)
+    # One additional square for std normalization for moments > 2
+    mem_ttstd = 0  if moment < 3 else tr_len + tr_len ** 2
+    return mem_base + mem_ttstd * 8
+
+  def memory_size(self):
+    mem_base = super().memory_size()
+    # One additional square for std normalization for moments > 2
+    mem_ttstd = 0  if self.moment < 3 else self.trace_len + self.trace_len ** 2
+    return mem_base + mem_ttstd * 8
+
   def _comoments(self, moments, normalize):
     C = self._tmpsq
     tr_len, cl_len = self.trace_len, self.cls.shape[1]
@@ -867,7 +885,7 @@ class bivar_2pass(_BivarNpassBase):
 
         for jj, (lm, rm) in enumerate(zip(*moments)):
           if lm == rm:
-            dsyrk(mft ** lm, C, b'L', b'N', 1.0, 0.0)
+            dsyrk(mft ** lm,            C, b'L', b'N', 1.0, 0.0)
           else:
             dgemm(mft ** rm, mft ** lm, C, b'N', b'T', 1.0, 0.0)
           retm[jj] = triuflatten(C) / m
@@ -885,11 +903,26 @@ class bivar_txtbk(_BivarNpassBase):
     m, n = self.acc_min_count, trace_len
     self._tri = np.empty((m, n * (n + 1) // 2))  # Handle the triangle dynamically
 
+  @staticmethod
+  def estimate_mem_size(tr_len, cl_len=1, moment=2):
+    exp_traces = 10  # Expected number of traces in the input batch
+    mem_base  = _BivarNpassBase.estimate_mem_size(tr_len, cl_len, moment)
+    mem_tri   = exp_traces * tr_len * (tr_len + 1) // 2
+    mem_ttstd = 0  if moment < 3 else tr_len + tr_len ** 2
+    return mem_base + (mem_tri  + mem_ttstd)* 8
+
+  def memory_size(self):
+    mem_base = super().memory_size()
+    # One additional square for std normalization for moments > 2
+    mem_ttstd = 0  if self.moment < 3 else self.trace_len + self.trace_len ** 2
+    return mem_base + mem_ttstd * 8
+
   def _realloc_tri(self, m):
     if len(self._tri) < m:
-      self._tri = None  # Dealloc previous memory
+      # Greater batch received, dealloc the previous triangle and alloc new one
       n = self.traces.shape[1]
-      self._tri = np.empty((m, n * (n + 1) // 2))  # Alloc new triangle dynamically
+      self._tri = None
+      self._tri = np.empty((m, n * (n + 1) // 2))
     return self._tri[:m]
 
   def _comoments(self, moments, normalize):
@@ -899,11 +932,10 @@ class bivar_txtbk(_BivarNpassBase):
       cl_set = [(self.cls[:, ii] == 0)]
       cl_set.append(~(cl_set[0]))
       for _i in range(2):
-        mft = _sort_meanfree(self.traces[cl_set[_i]], False)
+        mft  = _sort_meanfree(self.traces[cl_set[_i]], False)
         m, n = mft.shape
-
         retm = self._retm[_i]
-        tri = self._realloc_tri(len(mft))
+        tri  = self._realloc_tri(len(mft))
 
         for jj, (lm, rm) in enumerate(zip(*moments)):
           tri = _uni2bivar(mft, C, tri, lm, rm) if lm == rm else _uni2bivar_neq(mft, C, tri, lm, rm)
@@ -1058,16 +1090,22 @@ class univar_sum(_AccBase):
     moment = self.moment
 
     # Buffers for operations to avoid reallocations
-    self._buf = np.empty((3, trace_len), dtype=self._dtype)  # BLAS ops
+    self._buf    = np.empty((3, trace_len), dtype=self._dtype)  # BLAS ops buffer
     self._layout = np.empty((exp_traces, moment * trace_len + 1), dtype=self._dtype)
-    self._accs = np.zeros((classifier_len + 1, moment * trace_len + 1), dtype=self._dtype)
+    self._accs   = np.zeros((classifier_len + 1, moment * trace_len + 1), dtype=self._dtype)
 
     # Buffers for raw/central moments transformation
     self._retm = np.empty((2, moment, trace_len), dtype=np.float64)
 
   @staticmethod
-  def estimate_mem_size(trace_len, classifier_len, moment):
-    return ((classifier_len + 1) * moment * trace_len + 2 * moment * trace_len + 3 * trace_len) * 8
+  def estimate_mem_size(tr_len, cl_len=1, moment=2):
+    exp_traces = 50  # Expected number of traces in the input batch
+    acc_dtype  = np.float64
+    lytsz      = exp_traces * (moment * tr_len + 1)
+    accssz     = (cl_len + 1) * (moment * tr_len)
+    bufsz      = 3 * tr_len
+    ttsz       = 2 * moment * tr_len
+    return (lytsz + accssz + bufsz) * np.finfo(acc_dtype).bits // 8 + ttsz * 8
 
   def memory_size(self):
     mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
@@ -1094,8 +1132,8 @@ class univar_sum(_AccBase):
       n1, acc1 = acc1[0], acc1[1:]
       nn = [nT - n1, n1]
 
-      cm[0][:] = accT  #cm0 = (accT - acc[ii]) / nn[0] # Has to be copied out
-      cm[1][:] = 0.0  #cm1 =         acc[ii]  / nn[1] # Has to be zeroed out
+      cm[0][:] = accT         #  cm0 = (accT - acc[ii]) / nn[0] # Has to be copied out
+      cm[1][:] = 0.0          #  cm1 =         acc[ii]  / nn[1] # Has to be zeroed out
 
       # TODO: Shorten the accumulator to convert
       _rawsums2rawmoments_acc0(acc1.ravel(), cm[0].ravel(), max(1, nn[0]))

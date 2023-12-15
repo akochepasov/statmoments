@@ -72,7 +72,7 @@ def benchmark(benchset):
       min_update, min_tt = min(update_times), min(ttest_times)
       max_mom = str(engine.moment) * 2
       kname = '{}(m{})'.format(type(engine._impl).__name__, max_mom)
-      print("{:12}{:20}{:7d}{:8d}{:9d}{:8d}{:>8d}{:>9.1f}{:>11.1f}".format(
+      print("{:12}{:20}{:7d}{:8d}{:9d}{:8d}{:>8d}{:>9.1f}{:>9.1f}".format(
           name, kname, engine.memory_size >> 20, tr_count, tr_len, cl_count,
           int(tr_count / min_update), min_update, min_tt))
       # Force garbage collection

@@ -1,4 +1,3 @@
-
 import unittest
 from itertools import combinations_with_replacement as _combu
 
@@ -180,6 +179,26 @@ class Test_bivar(unittest.TestCase):
     _ensure_mom(engines, traces0, traces1, normalize)
     _ensure_comom(engines, traces0, traces1, normalize)
 
+
+  def test_memory_size(self):
+    moment = 4
+    tr_len, cl_len = 1000, 2
+    engines = all_engines_2d(tr_len, cl_len, moment=moment)
+
+    act_memsz = []
+    for eng in engines:
+      ams = eng.memory_size
+      act_memsz.append(ams)
+    est_memsz = []
+    for eng in engines:
+      kernel_type = type(eng._impl)
+      ems = statmoments.Bivar.estimate_mem_size(tr_len, cl_len, moment, kernel=kernel_type)
+      est_memsz.append(ems)
+
+    for m1, m2 in zip(act_memsz, est_memsz):
+      self.assertLessEqual(abs(m1 - m2), 1<<20)
+
+
   def test_trivial(self):
     m, cl_len = 4, 1
     traces0 = np.array([
@@ -225,11 +244,11 @@ class Test_bivar(unittest.TestCase):
 
 def run_one():
   tsuite = unittest.TestSuite()
-  tsuite.addTest(Test_bivar('test_init'))
+  tsuite.addTest(Test_bivar('test_memory_size'))
   unittest.TextTestRunner(verbosity=2).run(tsuite)
 
 
 # Entrance point
 if __name__ == '__main__':
-  # run_one()
-  unittest.main(argv=['first-arg-is-ignored'])
+  run_one()
+  # unittest.main(argv=['first-arg-is-ignored'])
