@@ -20,13 +20,13 @@ def bivar_benchmark(debug_run=False):
 
   print(' ===== Bivar benchmark ==== ')
   print('Peak performance estimation.')
-  print('\nVarying trace lengths.')
-  cl_len = 1
-  tr_len, tr_cnt = (50, 300) if debug_run else (500, 5000)
-  bl.benchmark([(f"bivar_m{moment}", [[engine], [tr_cnt], [n * tr_len], [cl_len]])
-                for n in [1, 2, 5, 10, 20]
-                for (impl, moment), engine in engines.items()
-                if not (impl == "bivar_txtbk" and n >= 4)])
+  # print('\nVarying trace lengths.')
+  # cl_len = 1
+  # tr_len, tr_cnt = (50, 300) if debug_run else (500, 5000)
+  # bl.benchmark([(f"bivar_m{moment}", [[engine], [tr_cnt], [n * tr_len], [cl_len]])
+  #               for n in [1, 2, 5, 10, 20]
+  #               for (impl, moment), engine in engines.items()
+  #               if not (impl == "bivar_txtbk" and n >= 4)])
 
   print('\nVarying trace count.')
   cl_len = 1
@@ -34,7 +34,9 @@ def bivar_benchmark(debug_run=False):
   bl.benchmark([(f"bivar_m{moment}", [[engine], [n * tr_cnt], [tr_len], [cl_len]])
                 for n in [1, 2, 5, 10, 20]
                 for (impl, moment), engine in engines.items()
-                if not (impl == "bivar_txtbk" and n >= 4)])
+                # if not (impl == "bivar_txtbk" and n >= 4)
+                if not (impl == "bivar_txtbk")
+                ])
 
 
 def run_benchmark():
