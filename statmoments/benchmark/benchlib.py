@@ -1,8 +1,10 @@
-
+import gc
 from itertools import product
 from os import urandom as _urandom
 from binascii import b2a_hex
 from timeit import default_timer as timer
+import tracemalloc
+from pprint import pprint
 
 import numpy as np
 
@@ -54,16 +56,16 @@ def benchmark(benchset):
 # bivar_m1    bivar_vtk(m(1, 1))                124    5000     1000       1      132   37.7      0.0
   print('{:12}{:30}{:>7}{:>8}{:>9}{:>8}{:>8}{:>9}{:>9}'.format(
         'Kernel', 'Implementation', 'MB', 'tr_cnt', 'tr_len', 'cl_cnt', 'tr/sec', 'upd_time', 'res_time'))
-
+  tracemalloc.start()
   for name, params in benchset:
     for engine_factory, tr_count, tr_len, cl_count in product(*params):
       update_times, ttest_times = [], []
       assert repeat > 0
       for _ in range(repeat):
-        # Garbage collect memory after the prev iteration to free the existing memory
-        traces, engine = None, None
         traces, classifiers = engine_factory.create_data(tr_count, tr_len, cl_count)
+        mem_snapshot_1 = tracemalloc.take_snapshot()
         engine = engine_factory.create_engine(tr_len, cl_count)
+        mem_snapshot_11 = tracemalloc.take_snapshot()
         for _ in range(number):
           start = timer()
           engine.update(traces, classifiers)  # Streaming: layout and accumulator
@@ -73,11 +75,20 @@ def benchmark(benchset):
           for _ in ttests(engine):  # On-demand: t-tests
             pass
           ttest_times.append(timer() - start)
-
+        mem_snapshot_2 = tracemalloc.take_snapshot()
+        mem_diff_eng = mem_snapshot_11.compare_to(mem_snapshot_1, 'filename')
+        mem_diff = mem_snapshot_2.compare_to(mem_snapshot_1, 'filename')
+        print("\nmem (engine):", sum(d.size_diff for d in mem_diff_eng) >> 20, ",  mem:", sum(d.size_diff for d in mem_diff) >> 20)
       min_update, min_tt = min(update_times), min(ttest_times)
       max_mom = ''.join(map(str, [engine.moment] * 2))
       kname = '{}(m{})'.format(type(engine._impl).__name__, max_mom)
       print("{:12}{:30}{:7d}{:8d}{:9d}{:8d}{:>8d}{:>9.1f}{:>9.1f}".format(
           name, kname, engine.memory_size >> 20, tr_count, tr_len, cl_count,
           int(tr_count / min_update), min_update, min_tt))
+    del traces
+    del engine
+    tracemalloc.clear_traces()
+    gc.collect()
+
+  tracemalloc.stop()
   print()
