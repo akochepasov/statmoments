@@ -19,6 +19,7 @@ def bivar_benchmark(debug_run=False):
              for m in [2, 3, 4]}
 
   print(' ===== Bivar benchmark ==== ')
+  print('Peak performance estimation.')
   print('\nVarying trace lengths.')
   cl_len = 1
   tr_len, tr_cnt = (50, 300) if debug_run else (500, 5000)

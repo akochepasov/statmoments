@@ -9,6 +9,14 @@ import numpy as np
 from statmoments.stattests import ttests
 
 
+def is_vtk_installed():
+  try:
+    import vtk
+    return True
+  except ModuleNotFoundError:
+    return False
+
+
 def make_trace_double(size):
   return np.random.uniform(-1, 1, size=size)
 
@@ -50,7 +58,7 @@ def benchmark(benchset):
   batch_count, repeat = 1, 1
 
   print('{:12}{:20}{:>7}{:>8}{:>9}{:>8}{:>8}{:>9}{:>11}'.format(
-        'Name', 'Implementation', 'MB', 'tr_cnt', 'tr_len', 'cl_cnt', 'tr/sec', 'upd_time', 'ttest_time'))
+    'Name', 'Implementation', 'MB', 'tr_cnt', 'tr_len', 'cl_cnt', 'tr/sec', 'upd_time', 'ttest_time'))
 
   for name, params in benchset:
     for engine_factory, tr_count, tr_len, cl_count in product(*params):
@@ -73,8 +81,8 @@ def benchmark(benchset):
       max_mom = str(engine.moment) * 2
       kname = '{}(m{})'.format(type(engine._impl).__name__, max_mom)
       print("{:12}{:20}{:7d}{:8d}{:9d}{:8d}{:>8d}{:>9.1f}{:>9.1f}".format(
-          name, kname, engine.memory_size >> 20, tr_count, tr_len, cl_count,
-          int(tr_count / min_update), min_update, min_tt))
+        name, kname, engine.memory_size >> 20, tr_count, tr_len, cl_count,
+        int(tr_count / min_update), min_update, min_tt))
       # Force garbage collection
       del traces
       del engine

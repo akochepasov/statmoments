@@ -9,16 +9,17 @@ from scipy.stats import skew, kurtosis
 import statmoments
 from statmoments._statmoments_impl import meanfree, triu_flatten, uni2bivar
 
+
 # np.random.seed(1)
 
 
 def all_engines_2d(tr_len, cl_len, moment=2, **kwargs):
   return [
-      statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum,         moment=moment, **kwargs),
-      statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_cntr,        moment=moment, **kwargs),
-      statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_txtbk,       moment=moment, **kwargs),
-      statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_2pass,       moment=moment, **kwargs),
-      statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum_detrend, moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum, moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_cntr, moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_txtbk, moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_2pass, moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum_detrend, moment=moment, **kwargs),
   ]
 
 
@@ -50,7 +51,7 @@ def calc_comom(traces, mm, normalized):
     ecm2 = triu_flatten(ecm2)
   else:
     emf = meanfree(traces)
-    ecm2 = np.dot(emf.T**lm, emf**rm) / len(emf)
+    ecm2 = np.dot(emf.T ** lm, emf ** rm) / len(emf)
     ecm2 = triu_flatten(ecm2)
     ecmt = uni2bivar(traces, *mm, False)
     ecmt = np.mean(ecmt, axis=0)
@@ -78,13 +79,13 @@ def _ensure_comom(engines, traces0, traces1, normalized=True):
     ecm = [(calc_comom(traces0, mm, normalized), calc_comom(traces1, mm, normalized)) for mm in lmm]
     ecm = list(zip(*ecm))
     acm = next(eng.comoments(moments=lmm))
-    nt.assert_allclose(acm,  ecm, atol=1e-08, err_msg='error in comoment array')
+    nt.assert_allclose(acm, ecm, atol=1e-08, err_msg='error in comoment array')
 
     # One by one
     for mm in lmm:
       ecm = [calc_comom(traces0, mm, normalized), calc_comom(traces1, mm, normalized)]
       acm = [cm[:, 0].copy() for cm in eng.comoments(moments=mm)][0]  # Only one classifier
-      nt.assert_allclose(acm,  ecm, atol=1e-08, err_msg='error in comoment order {}'.format(mm))
+      nt.assert_allclose(acm, ecm, atol=1e-08, err_msg='error in comoment order {}'.format(mm))
 
 
 def _ensure_mom(engines, traces0, traces1, normalized=True):
@@ -140,9 +141,9 @@ class Test_bivar(unittest.TestCase):
     tr_len, cl_len = 10000, 1
 
     kernels = [
-        statmoments.bivar_sum,
-        statmoments.bivar_cntr,
-        statmoments.bivar_2pass,
+      statmoments.bivar_sum,
+      statmoments.bivar_cntr,
+      statmoments.bivar_2pass,
     ]
     for kr in kernels:
       self.assertGreater(kr.estimate_mem_size(tr_len, cl_len, moment), 1024)
@@ -179,7 +180,6 @@ class Test_bivar(unittest.TestCase):
     _ensure_mom(engines, traces0, traces1, normalize)
     _ensure_comom(engines, traces0, traces1, normalize)
 
-
   def test_memory_size(self):
     moment = 4
     tr_len, cl_len = 1000, 2
@@ -196,20 +196,19 @@ class Test_bivar(unittest.TestCase):
       est_memsz.append(ems)
 
     for m1, m2 in zip(act_memsz, est_memsz):
-      self.assertLessEqual(abs(m1 - m2), 1<<20)
-
+      self.assertLessEqual(abs(m1 - m2), 1 << 20)
 
   def test_trivial(self):
     m, cl_len = 4, 1
     traces0 = np.array([
-        [2,  4,   5],
-        [4,  6,  -2],
-        [7,  3,   0],
-        [8,  5,   1],
-        [2,  7,   6],
-        [9,  1,   2],
-        [4,  8,  -4],
-        [1,  2,   8],
+      [2, 4, 5],
+      [4, 6, -2],
+      [7, 3, 0],
+      [8, 5, 1],
+      [2, 7, 6],
+      [9, 1, 2],
+      [4, 8, -4],
+      [1, 2, 8],
     ], dtype=np.int8)
     # traces0 = np.random.uniform(0, 20, (50, 10)).astype(np.int8)
     traces1 = (traces0 + np.sin(traces0) * 3).astype(np.int8)
