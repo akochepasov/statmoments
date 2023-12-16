@@ -60,7 +60,7 @@ class EngineFactory:
 
 
 def report_filename():
-  return f"benchmark-report-{datetime.datetime.now().isoformat().replace(':', '_')}.csv"
+  return f"benchmark-{datetime.datetime.now().isoformat().replace(':', '_')}.csv"
 
 
 def benchmark(test_filter, benchset, repeat=1):
