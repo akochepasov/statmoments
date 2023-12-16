@@ -36,12 +36,15 @@ def make_hypotheses(hlen):
   return bytes2classifiers(_urandom((hlen + 7) // 8))[:hlen]
 
 
-class EngineFactory(object):
+class EngineFactory:
   def __init__(self, make_trace, make_classifiers, factory, **options):
     self._gen_trace = make_trace
     self._gen_classifiers = make_classifiers
     self._factory = factory
     self._options = options
+
+  def name(self):
+    return self._options['kernel'].__name__
 
   def create_data(self, tr_count, tr_len, cl_len):
     blk_sz = 8
@@ -60,31 +63,36 @@ def report_filename():
   return f"benchmark-report-{datetime.datetime.now().isoformat().replace(':', '_')}.csv"
 
 
-def benchmark(benchset):
-  repeat = 1
-  batch_size = 500
-
+def benchmark(test_filter, benchset, repeat=1):
   report_name = report_filename()
   with open(report_name, newline='\n', mode='w') as report_file:
     report_writer = csv.writer(report_file)
-    report_writer.writerow(['name', 'kname', 'memory_b',
+    report_writer.writerow(['test', 'kname', 'memory_b',
                             'trace_count', 'trace_length', 'classifier_count', 'batch_size',
                             'avg_trace_time_s',
                             'total_update_time_s', 'min_update_time_s', 'max_update_time_s',
-                            'total_ttest_time_s', 'min_ttest_time_s', 'max_ttest_time_s', 'run_time'])
+                            'total_ttest_time_s', 'min_ttest_time_s', 'max_ttest_time_s',
+                            'run_time_s'])
     print(f"Writing report to {report_name}\n")
-    print('{:12}{:20}{:>7}{:>8}{:>9}{:>8}{:>10}{:>9}{:>11}'.format(
-      'Name', 'Implementation', 'MB', 'tr_cnt', 'tr_len', 'cl_cnt', 'tr/sec', 'upd_time', 'ttest_time'))
+    print('Peak performance estimation:')
+    print('{:18}{:>7}{:>8}{:>9}{:>8}{:>6}{:>10}{:>9}{:>11}'.format(
+      'Implementation', 'MB', 'tr_cnt', 'tr_len', 'cl_cnt', 'batsz', 'tr/sec', 'upd_time', 'ttest_time'))
     for name, params in benchset:
-      for engine_factory, tr_count, tr_len, cl_count in product(*params):
+      for engine_factory, tr_count, tr_len, cl_count, batch_size in product(*params):
+        if not test_filter(engine_factory.name(), tr_count, tr_len, cl_count, batch_size):
+          continue
+        batch_size = tr_count if batch_size is None else batch_size
+        assert batch_size > 0
         batch_count = tr_count // batch_size
+        assert batch_count > 0
         update_times, ttest_times = [], []
         assert repeat > 0
-        assert batch_count > 0
+        run_start = perf_counter()
         for _ in range(repeat):
           traces, classifiers = engine_factory.create_data(tr_count, tr_len, cl_count)
           assert len(traces) == len(classifiers)
           assert len(traces) == tr_count
+          assert batch_count * batch_size == tr_count
           engine = engine_factory.create_engine(tr_len, cl_count)
           for batch in range(batch_count):
             batch_slice = slice(batch * batch_size, (batch + 1) * batch_size)
@@ -100,17 +108,18 @@ def benchmark(benchset):
         min_update, min_tt = min(update_times), min(ttest_times)
         max_mom = str(engine.moment) * 2
         kname = '{}(m{})'.format(type(engine._impl).__name__, max_mom)
-        print("{:12}{:20}{:7d}{:8d}{:9d}{:8d}{:>10d}{:>9.1f}{:>9.1f}".format(
-          name, kname, engine.memory_size >> 20, tr_count, tr_len, cl_count,
+        print("{:18}{:7d}{:8d}{:9d}{:8d}{:6d}{:>10d}{:>9.1f}{:>9.1f}".format(
+          kname, engine.memory_size >> 20, tr_count, tr_len, cl_count, batch_size,
           int(tr_count / min_update), min_update, min_tt))
         report_writer.writerow([name, kname, engine.memory_size, tr_count, tr_len, cl_count, batch_size,
                                 (sum(update_times) + sum(ttest_times)) / tr_count,
                                 sum(update_times), min(update_times), max(update_times),
-                                sum(ttest_times), min(ttest_times), max(ttest_times)])
+                                sum(ttest_times), min(ttest_times), max(ttest_times),
+                                perf_counter() - run_start # Note that this includes data generation
+                                ])
         report_file.flush()
         # Force garbage collection
         del traces
         del engine
         gc.collect()
-
-  print()
+    print()

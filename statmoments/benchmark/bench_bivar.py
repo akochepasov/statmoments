@@ -10,33 +10,42 @@ import statmoments.benchmark.benchlib as bl
 def bivar_benchmark(debug_run=False):
   params = bl.make_trace_ushort, bl.make_hypotheses, statmoments.Bivar
 
-  kernels = [statmoments.bivar_sum, statmoments.bivar_2pass, statmoments.bivar_txtbk]
+  kernels = [statmoments.bivar_txtbk, statmoments.bivar_2pass, statmoments.bivar_sum]
   if bl.is_vtk_installed():
     kernels.append(statmoments.bivar_vtk)
 
-  engines = {(k.__name__, m): bl.EngineFactory(*params, kernel=k, moment=m)
+  engines = [bl.EngineFactory(*params, kernel=k, moment=m)
              for k in kernels
-             for m in [2, 3, 4]}
+             for m in [2, 3, 4]]
 
-  print(' ===== Bivar benchmark ==== ')
-  print('Peak performance estimation.')
-  # print('\nVarying trace lengths.')
-  # cl_len = 1
-  # tr_len, tr_cnt = (50, 300) if debug_run else (500, 5000)
-  # bl.benchmark([(f"bivar_m{moment}", [[engine], [tr_cnt], [n * tr_len], [cl_len]])
-  #               for n in [1, 2, 5, 10, 20]
-  #               for (impl, moment), engine in engines.items()
-  #               if not (impl == "bivar_txtbk" and n >= 4)])
+  traces_length, traces_count = (50, 300) if debug_run else (500, 5000)
 
-  print('\nVarying trace count.')
-  cl_len = 1
-  tr_len, tr_cnt = (50, 60) if debug_run else (1000, 5000)
-  bl.benchmark([(f"bivar_m{moment}", [[engine], [n * tr_cnt], [tr_len], [cl_len]])
-                for n in [1, 2, 5, 10, 20]
-                for (impl, moment), engine in engines.items()
-                # if not (impl == "bivar_txtbk" and n >= 4)
-                if not (impl == "bivar_txtbk")
-                ])
+  def test_filter(engine_name, tr_cnt, tr_len, _cl_len, batch_size):
+    if engine_name == 'bivar_txtbk' and (batch_size is not None or tr_cnt >= 2500 or tr_len >= 2500):
+      # txtbk is too slow for larger tests
+      return False
+    if engine_name != 'bivar_sum' and tr_cnt * tr_len >= 40000 * 5000:
+      return False
+    return True
+
+  steps = [1, 2, 5, 10, 20]
+  bl.benchmark(test_filter,
+               [
+                 ("trlen", [engines,
+                            [traces_count],
+                            [n * traces_length for n in steps],
+                            [1],  # ttest class counts
+                            [None]]),  # batch size
+                 ("trcnt", [engines,
+                            [n * traces_count for n in steps],
+                            [traces_length],
+                            [1],
+                            [None]]),
+                 ("batch", [engines,
+                            [n * traces_count for n in steps],
+                            [1000, 5000],
+                            [1],
+                            [500, 1000]])])
 
 
 def run_benchmark():
@@ -46,8 +55,9 @@ def run_benchmark():
   print(f"scipy : {scipy.__version__}")
   print("-" * 80)
 
+  print(' ===== Bivar benchmark ==== ')
   np.random.seed(1)
-  np.seterr(all='ignore')
+  # np.seterr(all='ignore')
   bivar_benchmark()
 
 
