@@ -11,14 +11,6 @@ import numpy as np
 from statmoments.stattests import ttests
 
 
-def is_vtk_installed():
-  try:
-    import vtk
-    return True
-  except ModuleNotFoundError:
-    return False
-
-
 def make_trace_double(size):
   return np.random.uniform(-1, 1, size=size)
 
