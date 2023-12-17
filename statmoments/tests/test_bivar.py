@@ -19,6 +19,7 @@ def all_engines_2d(tr_len, cl_len, moment=2, **kwargs):
     statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_txtbk,       moment=moment, **kwargs),
     statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_2pass,       moment=moment, **kwargs),
     statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum_detrend, moment=moment, **kwargs),
+    # statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_vtk,         moment=1,      **kwargs),
   ]
 
 
@@ -102,9 +103,6 @@ def _ensure_mom(engines, traces0, traces1, normalized=True):
     emom = [calc_mom(traces0, m, normalized), calc_mom(traces1, m, normalized)]
     amom = [_m[:, 0].copy() for _m in eng.moments(moments=m)][0]  # Only one classifier
     nt.assert_allclose(emom, amom, atol=1e-07, err_msg='error in engine {} moment order {}'.format(eng._impl, m))
-
-    if max_moment < 3:
-      return
 
     # Central moment
     m = 2
@@ -230,9 +228,9 @@ class Test_bivar(unittest.TestCase):
 
     for eng in engines:
       # Pass one batch after another
-      eng.update(all_traces[:6], all_cls[:6])
-      eng.update(all_traces[6:], all_cls[6:])
-      # eng.update(all_traces, all_cls)  # VTK cannot learn streamingly
+      # eng.update(all_traces[:6], all_cls[:6])
+      # eng.update(all_traces[6:], all_cls[6:])
+      eng.update(all_traces, all_cls)  # VTK cannot learn streamingly
 
     _ensure_mom(engines, traces0, traces1)
     _ensure_comom(engines, traces0, traces1)
@@ -244,11 +242,11 @@ class Test_bivar(unittest.TestCase):
 
 def run_one():
   tsuite = unittest.TestSuite()
-  tsuite.addTest(Test_bivar('test_memory_size'))
+  tsuite.addTest(Test_bivar('test_trivial'))
   unittest.TextTestRunner(verbosity=2).run(tsuite)
 
 
 # Entrance point
 if __name__ == '__main__':
-  run_one()
-  # unittest.main(argv=['first-arg-is-ignored'])
+  # run_one()
+  unittest.main(argv=['first-arg-is-ignored'])

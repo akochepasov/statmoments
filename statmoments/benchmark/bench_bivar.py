@@ -1,3 +1,4 @@
+
 import sys
 
 import numpy as np
@@ -6,32 +7,24 @@ import scipy
 import statmoments
 import statmoments.benchmark.benchlib as bl
 
+from statmoments._native import is_vtk_installed
+
 # Setup
-debug_run = False
+debug_run = True
 np.random.seed(1)
 np.seterr(all='ignore')
-
-
-def have_vtk():
-  # try:
-  #   import vtk
-  #   return True
-  # except ModuleNotFoundError:
-    return False
-
 
 def bivar_benchmark():
   params = bl.make_trace_ushort, bl.make_hypotheses, statmoments.Bivar
 
   kernels = [statmoments.bivar_sum, statmoments.bivar_2pass, statmoments.bivar_txtbk]
-  if have_vtk():
+  if is_vtk_installed():
     kernels.append(statmoments.bivar_vtk)
 
   engines = {(k.__name__, m): bl.EngineFactory(*params, kernel=k, moment=m)
              for k in kernels
              for m in [2, 3, 4]}
 
-  print(' ===== Bivar benchmark ==== ')
   print('\nVarying trace lengths.')
   cl_len = 1
   tr_len, tr_cnt = (50, 300) if debug_run else (500, 5000)
@@ -56,6 +49,7 @@ def run_benchmark():
   print(f"scipy : {scipy.__version__}")
   print("-" * 80)
 
+  print(' ===== Bivar benchmark ==== ')
   bivar_benchmark()
 
 
