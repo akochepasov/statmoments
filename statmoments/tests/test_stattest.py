@@ -15,11 +15,11 @@ from statmoments._statmoments_impl import meanfree, triu_flatten, uni2bivar
 
 def all_engines_tt(tr_len, cl_len, moment=2, **kwargs):
   return [
-      statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum,         moment=moment, **kwargs),
-      statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_cntr,        moment=moment, **kwargs),
-      statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_txtbk,       moment=moment, **kwargs),
-      statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_2pass,       moment=moment, **kwargs),
-      statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum_detrend, moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum,         moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_cntr,        moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_txtbk,       moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_2pass,       moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum_detrend, moment=moment, **kwargs),
   ]
 
 
@@ -352,16 +352,17 @@ class Test_stat(unittest.TestCase):
 
     n0, n1 = len(traces0), len(traces1)
 
-    engines = [statmoments.Univar(len(traces0[0]), cl_len, kernel=statmoments.univar_sum, moment=m, acc_min_count=3)]
+    engines = [
+      statmoments.Univar(len(traces0[0]), cl_len, kernel=statmoments.univar_sum, moment=m, acc_min_count=3),
+    ]
     for eng in engines:
       eng.update(traces0, ['0'] * n0)
       eng.update(traces1, ['1'] * n1)
 
     # tt 1 ord
     i = 1
-    tt_act = [next(statmoments.stattests.ttests(eng, moment=i)).copy() for eng in engines]
-
     tt_exp = wttest(traces0, traces1)
+    tt_act = [next(statmoments.stattests.ttests(eng, moment=i)).copy() for eng in engines]
 
     test_all = functools.partial(nt.assert_almost_equal, tt_exp)
     list(map(test_all, tt_act))
@@ -420,8 +421,10 @@ class Test_stat(unittest.TestCase):
 
     n0, n1 = len(traces0), len(traces1)
 
-    # engines = [statmoments.Bivar(len(traces0[0]), cl_len, kernel=statmoments.bivar_sum, moment=m, acc_min_count=3)]
-    engines = [statmoments.Bivar(len(traces0[0]), cl_len, kernel=statmoments.bivar_2pass, moment=m, acc_min_count=3)]
+    engines = [
+      statmoments.Bivar(len(traces0[0]), cl_len, kernel=statmoments.bivar_2pass, moment=m, acc_min_count=3),
+      statmoments.Bivar(len(traces0[0]), cl_len, kernel=statmoments.bivar_sum,   moment=m, acc_min_count=3)
+    ]
     for eng in engines:
       eng.update(traces0, ['0'] * n0)
       eng.update(traces1, ['1'] * n1)
