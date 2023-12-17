@@ -33,6 +33,9 @@ class EngineFactory(object):
     self._factory = factory
     self._options = options
 
+  def name(self):
+    return self._options['kernel'].__name__
+
   def create_data(self, tr_count, tr_len, cl_len):
     blk_sz = 8
     traces = np.empty((tr_count // blk_sz * blk_sz, tr_len))

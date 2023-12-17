@@ -85,9 +85,10 @@ ENV/
 env.bak/
 venv.bak/
 
-# VS user-specific files
-.vs/
+# IDE
+.idea
 .vscode/
+.vs/
 *.suo
 *.user
 
