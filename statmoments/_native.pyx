@@ -16,6 +16,18 @@ USE_VTK = 0
 cython.declare(USE_GPU = cython.int)
 USE_GPU = 0
 
+def is_vtk_installed():
+  if not USE_VTK:
+    return False
+
+  try:
+    import vtk
+    print("VTK is installed and used")
+    return True
+  except ModuleNotFoundError:
+    print("VTK is not installed")
+    return False
+
 #if USE_GPU:
 #    from cupy_backends.cuda.libs import cupy_cublas
 #    from cupy import cublas as cupy_cublas
@@ -963,19 +975,21 @@ class bivar_txtbk(_BivarNpassBase):
 
 ##################################### VTK #####################################
 # Used for benchmarking only
-if USE_VTK:
+if is_vtk_installed():
   import vtk
   from vtk.util.numpy_support import numpy_to_vtk as np2vtk, vtk_to_numpy as vtk2np
 
 
 class bivar_vtk(object):
   """A class, using vtk multivariate kernel. Covariance ONLY!!!"""
-  def __init__(self, trace_len, classifier_len, moment=2, **kwargs):
-    self.moment = moment
-    self.trace_len = trace_len
+  def __init__(self, tr_len, classifier_len, moment=2, **kwargs):
+    self.moment = moment # In fact, only 1
+    self.trace_len = tr_len
+    self.classifiers_len = classifier_len
     self.acc_min_count = kwargs.pop('acc_min_count', 10)
     self._stats = [[vtk.vtkMultiCorrelativeStatistics() for i in range(2)] for _ in range(classifier_len)]
     self._counts = [[0, 0] for i in range(classifier_len)]
+    self._retm   = np.empty((2, 2, tr_len * (tr_len + 1) // 2))
     for mcss in self._stats:
       for mcs in mcss:
         mcs.SetLearnOption(True)
@@ -987,11 +1001,13 @@ class bivar_vtk(object):
     def _ms_helper(instl):
       return sum(i.GetActualMemorySize() for i in instl)
 
-    intbl0 = [mcs.GetInputDataObject(0, 0) for mcss in self._stats for mcs in mcss]
-    outtbl0 = [mcs.GetOutputDataObject(0) for mcss in self._stats for mcs in mcss]
-    outds1 = [mcs.GetOutputDataObject(1) for mcss in self._stats for mcs in mcss]
+    intbl0  = [mcs.GetInputDataObject(0, 0) for mcss in self._stats for mcs in mcss]
+    outtbl0 = [mcs.GetOutputDataObject(0)   for mcss in self._stats for mcs in mcss]
+    outds1  = [mcs.GetOutputDataObject(1)   for mcss in self._stats for mcs in mcss]
 
-    return sum(map(_ms_helper, (intbl0, outtbl0, outds1))) * 1024
+    mem_ttest = 2 * 2 * self.trace_len * (self.trace_len + 1) // 2 * 8
+
+    return sum(map(_ms_helper, (intbl0, outtbl0, outds1))) * 1024 + mem_ttest
 
   @property
   def total_count(self):
@@ -1024,9 +1040,9 @@ class bivar_vtk(object):
     # return [vtk2np(dd.GetColumn(1))[dd.GetNumberOfRows()-1] for dd in dbs]
     return self._counts[i]
 
-  def _moments(self, moments, normalize):
-    m = moments[0]
-    if self.moment < np.max(m):
+  def moments(self, moments, normalize):
+    maxm = np.max(moments)
+    if self.moment * 2 < maxm:
       raise ValueError("The moment should be less or equal than indicated in constructor.")
 
     if normalize:
@@ -1035,33 +1051,43 @@ class bivar_vtk(object):
     tr_len, min_cnt = self.trace_len, self.acc_min_count
     triuflatten = _triuflatten_gen(tr_len)
 
-    avgs = []
-    for mcss in self._stats:
-      for mcs in mcss:
-        dd = mcs.GetOutputDataObject(1).GetBlock(1)
-        n = dd.GetNumberOfRows() - 1
-        avg = vtk2np(dd.GetColumn(1))[:n]
-        avgs.append(avg)
-    yield (avgs[0], avgs[0]), (avgs[1], avgs[1])
+    retm = np.empty((2, len(moments), tr_len), dtype=np.float64)
 
-  def _comoments(self, moments, normalize):
+    for ii, mcss in enumerate(self._stats):
+      for _i, mcs in enumerate(mcss):
+        dd = mcs.GetOutputDataObject(1).GetBlock(1)
+        n, cm = dd.GetNumberOfRows() - 1, retm[_i]
+        nn = vtk2np(dd.GetColumn(1))[n]
+        for jj, m in enumerate(moments):
+          if m == 1:
+            cm[:] = vtk2np(dd.GetColumn(1))[:n]
+          else: # VTK cannot find moments higher
+            for k in range(n):
+              cm[jj, k] = vtk2np(dd.GetColumn(k + 2))[k]
+            # Restore to ddof=0 to ensure correctness
+            cm[jj, :] *= (nn - 1.0) / nn
+
+    yield retm[:, :len(moments)]
+
+  def comoments(self, moments, normalize):
     tr_len, min_cnt = self.trace_len, self.acc_min_count
     triuflatten = _triuflatten_gen(tr_len)
 
-    covs = []
-    for mcss in self._stats:
-      for mcs in mcss:
+    for ii, mcss in enumerate(self._stats):
+      for _i, mcs in enumerate(mcss):
+        retm = self._retm[_i]
         dd = mcs.GetOutputDataObject(1).GetBlock(1)
         n = dd.GetNumberOfRows() - 1
-        m = vtk2np(dd.GetColumn(1))[n]
+        nn = vtk2np(dd.GetColumn(1))[n]
         cov_arr = np.empty((n, n))
-        for k in range(n):
-          cov_arr[k, :] = vtk2np(dd.GetColumn(k + 2))[:n]
-        # Restore to ddof=0 to ensure correctness
-        cov_arr *= (m - 1.0) / m
-        covs.append(triuflatten(cov_arr.T))
-    yield (covs[0], covs[0]), (covs[1], covs[1])
-
+        # VTK cannot find co-moments higher than covariance
+        for jj, m in enumerate(moments):
+          for k in range(n):
+            cov_arr[k, :] = vtk2np(dd.GetColumn(k + 2))[:n]
+          # Restore to ddof=0 to ensure correctness
+          cov_arr *= (nn - 1.0) / nn
+          retm[jj] = triuflatten(cov_arr.T)
+    yield self._retm[:, :len(moments[0])]
 
 ########################## UNIVARIATE IMPLEMENTATIONS #########################
 
@@ -1102,7 +1128,7 @@ class univar_sum(_AccBase):
     exp_traces = 50  # Expected number of traces in the input batch
     acc_dtype  = np.float64
     lytsz      = exp_traces * (moment * tr_len + 1)
-    accssz     = (cl_len + 1) * (moment * tr_len)
+    accssz     = (cl_len + 1) * (moment * tr_len + 1)
     bufsz      = 3 * tr_len
     ttsz       = 2 * moment * tr_len
     return (lytsz + accssz + bufsz) * np.finfo(acc_dtype).bits // 8 + ttsz * 8
