@@ -9,17 +9,17 @@ from scipy.stats import skew, kurtosis
 import statmoments
 from statmoments._statmoments_impl import meanfree, triu_flatten, uni2bivar
 
-
 # np.random.seed(1)
 
 
 def all_engines_2d(tr_len, cl_len, moment=2, **kwargs):
   return [
-    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum, moment=moment, **kwargs),
-    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_cntr, moment=moment, **kwargs),
-    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_txtbk, moment=moment, **kwargs),
-    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_2pass, moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum,         moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_cntr,        moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_txtbk,       moment=moment, **kwargs),
+    statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_2pass,       moment=moment, **kwargs),
     statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_sum_detrend, moment=moment, **kwargs),
+    # statmoments.Bivar(tr_len, cl_len, kernel=statmoments.bivar_vtk,         moment=1,      **kwargs),
   ]
 
 
@@ -104,9 +104,6 @@ def _ensure_mom(engines, traces0, traces1, normalized=True):
     amom = [_m[:, 0].copy() for _m in eng.moments(moments=m)][0]  # Only one classifier
     nt.assert_allclose(emom, amom, atol=1e-07, err_msg='error in engine {} moment order {}'.format(eng._impl, m))
 
-    if max_moment < 3:
-      return
-
     # Central moment
     m = 2
     emom = [calc_mom(traces0, m, normalized), calc_mom(traces1, m, normalized)]
@@ -180,6 +177,7 @@ class Test_bivar(unittest.TestCase):
     _ensure_mom(engines, traces0, traces1, normalize)
     _ensure_comom(engines, traces0, traces1, normalize)
 
+
   def test_memory_size(self):
     moment = 4
     tr_len, cl_len = 1000, 2
@@ -198,17 +196,18 @@ class Test_bivar(unittest.TestCase):
     for m1, m2 in zip(act_memsz, est_memsz):
       self.assertLessEqual(abs(m1 - m2), 1 << 20)
 
+
   def test_trivial(self):
     m, cl_len = 4, 1
     traces0 = np.array([
-      [2, 4, 5],
-      [4, 6, -2],
-      [7, 3, 0],
-      [8, 5, 1],
-      [2, 7, 6],
-      [9, 1, 2],
-      [4, 8, -4],
-      [1, 2, 8],
+        [2,  4,   5],
+        [4,  6,  -2],
+        [7,  3,   0],
+        [8,  5,   1],
+        [2,  7,   6],
+        [9,  1,   2],
+        [4,  8,  -4],
+        [1,  2,   8],
     ], dtype=np.int8)
     # traces0 = np.random.uniform(0, 20, (50, 10)).astype(np.int8)
     traces1 = (traces0 + np.sin(traces0) * 3).astype(np.int8)
@@ -229,9 +228,9 @@ class Test_bivar(unittest.TestCase):
 
     for eng in engines:
       # Pass one batch after another
-      eng.update(all_traces[:6], all_cls[:6])
-      eng.update(all_traces[6:], all_cls[6:])
-      # eng.update(all_traces, all_cls)  # VTK cannot learn streamingly
+      # eng.update(all_traces[:6], all_cls[:6])
+      # eng.update(all_traces[6:], all_cls[6:])
+      eng.update(all_traces, all_cls)  # VTK cannot learn streamingly
 
     _ensure_mom(engines, traces0, traces1)
     _ensure_comom(engines, traces0, traces1)
@@ -243,11 +242,11 @@ class Test_bivar(unittest.TestCase):
 
 def run_one():
   tsuite = unittest.TestSuite()
-  tsuite.addTest(Test_bivar('test_memory_size'))
+  tsuite.addTest(Test_bivar('test_trivial'))
   unittest.TextTestRunner(verbosity=2).run(tsuite)
 
 
 # Entrance point
 if __name__ == '__main__':
-  run_one()
-  # unittest.main(argv=['first-arg-is-ignored'])
+  # run_one()
+  unittest.main(argv=['first-arg-is-ignored'])
