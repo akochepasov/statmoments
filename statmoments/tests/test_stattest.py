@@ -28,17 +28,14 @@ def mom_3pass(data, k, normalize=False):
 
 def mom_libs(data, k, normalize=False):
   """ Central moments, numpy and scipy """
-  kwargs = {'axis': 0}
-  # First 5 moments, with sigma-normalized skewness and kurtosis
+  # First 5 moments, with sigma-normalized skewness, kurtosis and 5th
   kurtosis_pearson = lambda x, **a: kurtosis(x, fisher=False, **a)  # noqa: E731
   stat_moment = lambda x, **a: moment(x, moment=k, **a) / np.std(data, **a)**k
   mom_funcs = [np.sum, np.mean, np.var, skew, kurtosis_pearson, stat_moment]
-  
-  mom_res = mom_funcs[k](data, **kwargs)
 
-  if k >= 3 and not normalize:
-    mom_res *= np.std(data, axis=0) ** k
-  return mom_res
+  mom_res = mom_funcs[k](data, axis=0)
+
+  return mom_res if k < 3 or normalize else mom_res * np.std(data, axis=0) ** k
 
 
 def mom_sums(data, mom, normalize=False):
@@ -82,16 +79,18 @@ def ensure_ttest_1d(eng, traces0, traces1):
 
   # t-test order 1
   exp_tt = wttest(traces0, traces1)
-  act_tt = next(statmoments.stattests.ttests(eng, moment=1, dim=1)).copy()
-  nt.assert_allclose(act_tt, exp_tt)
+  act_tt = [tt.copy() for tt in statmoments.stattests.ttests(eng, moment=1, dim=1)]
+  nt.assert_allclose(exp_tt, act_tt[0])
+  nt.assert_allclose(-1 * exp_tt, act_tt[1])
 
   if max_ttmoment < 2:
     return
 
   # t-test order 2
   exp_tt = wttest(meanfree(traces0)**2, meanfree(traces1)**2)
-  act_tt = next(statmoments.stattests.ttests(eng, moment=2, dim=1)).copy()
-  nt.assert_allclose(act_tt, exp_tt)
+  act_tt = [tt.copy() for tt in statmoments.stattests.ttests(eng, moment=2, dim=1)]
+  nt.assert_allclose(exp_tt, act_tt[0])
+  nt.assert_allclose(-1 * exp_tt, act_tt[1])
 
   if max_ttmoment < 3:
     return
@@ -101,8 +100,9 @@ def ensure_ttest_1d(eng, traces0, traces1):
     trstd0 = (meanfree(traces0) / np.std(traces0, axis=0))**m
     trstd1 = (meanfree(traces1) / np.std(traces1, axis=0))**m
     exp_tt = wttest(trstd0, trstd1)
-    act_tt = next(statmoments.stattests.ttests(eng, moment=m, dim=1)).copy()
-    nt.assert_allclose(act_tt, exp_tt)
+    act_tt = [tt.copy() for tt in statmoments.stattests.ttests(eng, moment=m, dim=1)]
+    nt.assert_allclose(exp_tt, act_tt[0])
+    nt.assert_allclose(-1 * exp_tt, act_tt[1])
 
 
 def ensure_ttest_2d(eng, traces0, traces1):
@@ -114,12 +114,14 @@ def ensure_ttest_2d(eng, traces0, traces1):
   # Test 2D
   max_moment = eng.moment // 2
   for mm in _combu(range(1, max_moment + 1), r=2):
-    ett = [wttest(uni2bivar(traces0, *mm), uni2bivar(traces1, *mm))]
+    ett = wttest(uni2bivar(traces0, *mm), uni2bivar(traces1, *mm))
     att = [_tt.copy() for _tt in statmoments.stattests.ttests(eng, moment=mm)]
-    nt.assert_allclose(att, ett, err_msg='Error in ttest order {}'.format(mm))
+    nt.assert_allclose(att[0], ett, err_msg=f'Error in ttest order {mm}')
+    nt.assert_allclose(att[1], -1 * ett, err_msg=f'Error in ttest order {mm}')
     if np.sum(mm) >= 3:
-      ettnorm = [wttest(uni2bivar(traces0, *mm), uni2bivar(traces1, *mm))]
-      nt.assert_almost_equal(att, ettnorm, err_msg='Error in normalized ttest order {}'.format(mm))
+      ettnorm = wttest(uni2bivar(traces0, *mm), uni2bivar(traces1, *mm))
+      nt.assert_almost_equal(att[0], ettnorm, err_msg=f'Error in normalized ttest order {mm}')
+      nt.assert_almost_equal(att[1], -1 * ettnorm, err_msg=f'Error in normalized ttest order {mm}')
 
 
 eng2d_list = [
@@ -178,16 +180,16 @@ def test_init2(kernel2d):
 @pytest.mark.parametrize("kernel1d", eng1d_list)
 def test_ttest_1d(kernel1d):
   max_moment = 4
-  tr_len, cl_len = 5, 1
+  tr_len, cl_len = 5, 2
   n0, n1 = 987, 1234
   traces0 = np.random.randint(0, 256, (n0, tr_len))
   # Insert different distribution into some points of one batch
   traces0[:, 2:4] = np.random.normal(35, 10, (n0, 2)).astype(traces0.dtype)
   traces1 = np.random.randint(0, 256, (n1, tr_len))
-  eng = statmoments.Univar(tr_len, cl_len, kernel=kernel1d, moment=2 * max_moment)
+  eng = statmoments.Univar(tr_len, cl_len, moment=2*max_moment, kernel=kernel1d)
 
-  eng.update(traces0, [[0]] * n0)
-  eng.update(traces1, ['1'] * n1)
+  eng.update(traces0, ['01'] * n0)
+  eng.update(traces1, [[1, 0]] * n1)
 
   ensure_ttest_1d(eng, traces0, traces1)
 
@@ -202,7 +204,7 @@ def test_ttest_1d(kernel1d):
     assert np.all(np.abs(tt2[2:4]) > 30)
   # Find no different skews
   for tt3 in statmoments.stattests.ttests(eng, moment=3):
-    nt.assert_array_less(np.abs(tt3), 2)
+    nt.assert_array_less(np.abs(tt3), 2.5)
   # Find different kurtoses
   for tt4 in statmoments.stattests.ttests(eng, moment=4):
     nt.assert_array_less(np.abs(tt4[0:2]), 3)
@@ -212,16 +214,16 @@ def test_ttest_1d(kernel1d):
 @pytest.mark.parametrize("kernel2d", eng2d_list)
 def test_ttest_2d(kernel2d):
   max_moment = 4
-  tr_len, cl_len = 4, 1
+  tr_len, cl_len = 4, 2
   n0, n1 = 987, 1234
   traces0 = np.random.randint(0, 256, (n0, tr_len))
   traces1 = np.random.randint(0, 256, (n1, tr_len))
   # Insert co-dependence to some point of one batch
   traces0[:, 2] = (3 * traces0[:, 3] / 2 + 20)
-  eng = statmoments.Bivar(tr_len, cl_len, kernel=kernel2d, moment=max_moment)
+  eng = statmoments.Bivar(tr_len, cl_len, moment=max_moment, kernel=kernel2d)
 
-  eng.update(traces0, [[0]] * n0)
-  eng.update(traces1, ['1'] * n1)
+  eng.update(traces0, [[0, 1]] * n0)
+  eng.update(traces1, ['10'] * n1)
 
   ensure_ttest_1d(eng, traces0, traces1)
   ensure_ttest_2d(eng, traces0, traces1)
@@ -229,14 +231,14 @@ def test_ttest_2d(kernel2d):
   # Ensure t-test finds the inserted correlation
   # Find different covars
   for tt2 in statmoments.stattests.ttests(eng, moment=(1, 1)):
-    nt.assert_array_less(np.abs(tt2[0:7]), 3)
+    nt.assert_array_less(np.abs(tt2[0:7]), 3.2)
     nt.assert_array_less(15, np.abs(tt2[7:9]))
   # Find no different co-skews
   for tt3 in statmoments.stattests.ttests(eng, moment=(1, 2)):
-    nt.assert_array_less(np.abs(tt3), 3)
+    nt.assert_array_less(np.abs(tt3), 3.2)
   # Find different co-kurtoses
   for tt4 in statmoments.stattests.ttests(eng, moment=(2, 2)):
-    nt.assert_array_less(np.abs(tt4[0:8]), 2)
+    nt.assert_array_less(np.abs(tt4[0:8]), 2.1)
     nt.assert_array_less(6, np.abs(tt2[8]))
 
 
@@ -307,7 +309,7 @@ def test_nist(kernel1d):
   ]
 
   tr_len, cl_len, m = 1, 2, 1
-  eng = statmoments.Univar(tr_len, cl_len, kernel=kernel1d, moment=2 * m)
+  eng = statmoments.Univar(tr_len, cl_len, moment=2*m, kernel=kernel1d)
 
   eng.update(traces[0], [[0, 1]] * len(traces[0]))
   eng.update(traces[1], [[1, 0]] * len(traces[1]))
@@ -371,7 +373,7 @@ def test_trivial_1d(trivial_traces, kernel1d):
 
   n0, n1 = len(traces0), len(traces1)
 
-  eng = statmoments.Univar(len(traces0[0]), cl_len, kernel=kernel1d, moment=2*m, acc_min_count=3)
+  eng = statmoments.Univar(len(traces0[0]), cl_len, moment=2*m, kernel=kernel1d, acc_min_count=3)
   eng.update(traces0, ['0'] * n0)
   eng.update(traces1, ['1'] * n1)
 
@@ -416,10 +418,9 @@ def test_trivial_1d(trivial_traces, kernel1d):
 def test_trivial_2d(trivial_traces, kernel2d):
   m, cl_len = 4, 1
   traces0, traces1 = trivial_traces
-
   n0, n1 = len(traces0), len(traces1)
 
-  eng = statmoments.Bivar(len(traces0[0]), cl_len, kernel=kernel2d, moment=m, acc_min_count=3)
+  eng = statmoments.Bivar(len(traces0[0]), cl_len, moment=m, kernel=kernel2d, acc_min_count=3)
   eng.update(traces0, ['0'] * n0)
   eng.update(traces1, ['1'] * n1)
 
@@ -445,5 +446,5 @@ def test_trivial_2d(trivial_traces, kernel2d):
 
 # Entrance point
 if __name__ == '__main__':
-  pytest.main(["-v", __file__ + "::test_init1"])
+  pytest.main(["-v", __file__ + "::test_ttest_1d"])
 

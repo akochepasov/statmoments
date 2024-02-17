@@ -32,13 +32,10 @@ def test_engine_choice():
   assert isinstance(engine3._impl, statmoments.univar_sum_detrend)
 
 
-def kurtosis_pearson(x, **args):
-  return kurtosis(x, fisher=False, **args)
-
-
 def calc_mom(traces, m, normalized):
   # First 4 moments, with sigma-normalized skewness and kurtosis
   if m < 5:
+    kurtosis_pearson = lambda x, **a: kurtosis(x, fisher=False, **a)  # noqa: E731
     mom_list = [None, np.mean, np.var, skew, kurtosis_pearson]
     mom_res = mom_list[m](traces, axis=0)
   else:  # Just in case
