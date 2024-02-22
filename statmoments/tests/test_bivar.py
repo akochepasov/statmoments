@@ -17,7 +17,7 @@ def calc_mom(data, k, normalize=False):
   """ Central moments, numpy and scipy """
   # First 5 moments, with sigma-normalized skewness, kurtosis and 5th
   kurtosis_pearson = lambda x, **a: kurtosis(x, fisher=False, **a)  # noqa: E731
-  stat_moment = lambda x, **a: moment(x, moment=k, **a) / np.std(data, **a)**k
+  stat_moment = lambda x, **a: moment(x, moment=k, **a) / np.std(data, **a)**k  # noqa: E731
   mom_funcs = [np.sum, np.mean, np.var, skew, kurtosis_pearson]
   mom_funcs += [stat_moment] * 4
 
@@ -104,12 +104,13 @@ def _ensure_mom(eng, traces0, traces1, normalized=True):
 
 
 eng2d_list = [
-  statmoments.bivar_2pass,
-  statmoments.bivar_txtbk,
-  statmoments.bivar_sum,
-  statmoments.bivar_cntr,
-  statmoments.bivar_sum_detrend
+    statmoments.bivar_2pass,
+    statmoments.bivar_txtbk,
+    statmoments.bivar_sum,
+    statmoments.bivar_cntr,
+    statmoments.bivar_sum_detrend
 ]
+
 
 @pytest.mark.parametrize("m", [2, 4])
 @pytest.mark.parametrize("kernel2d", eng2d_list)

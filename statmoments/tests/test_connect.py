@@ -8,16 +8,16 @@ import statmoments
 # np.random.seed(1)
 
 eng1d_list = [
-  statmoments.univar_sum,
-  statmoments.univar_sum_detrend
+    statmoments.univar_sum,
+    statmoments.univar_sum_detrend
 ]
 
 eng2d_list = [
-  statmoments.bivar_2pass,
-  statmoments.bivar_txtbk,
-  statmoments.bivar_sum,
-  statmoments.bivar_cntr,
-  statmoments.bivar_sum_detrend
+    statmoments.bivar_2pass,
+    statmoments.bivar_txtbk,
+    statmoments.bivar_sum,
+    statmoments.bivar_cntr,
+    statmoments.bivar_sum_detrend
 ]
 
 

@@ -30,8 +30,9 @@ def mom_libs(data, k, normalize=False):
   """ Central moments, numpy and scipy """
   # First 5 moments, with sigma-normalized skewness, kurtosis and 5th
   kurtosis_pearson = lambda x, **a: kurtosis(x, fisher=False, **a)  # noqa: E731
-  stat_moment = lambda x, **a: moment(x, moment=k, **a) / np.std(data, **a)**k
-  mom_funcs = [np.sum, np.mean, np.var, skew, kurtosis_pearson, stat_moment]
+  stat_moment = lambda x, **a: moment(x, moment=k, **a) / np.std(data, **a)**k  # noqa: E731
+  mom_funcs = [np.sum, np.mean, np.var, skew, kurtosis_pearson]
+  mom_funcs += [stat_moment] * 4
 
   mom_res = mom_funcs[k](data, axis=0)
 
@@ -125,33 +126,17 @@ def ensure_ttest_2d(eng, traces0, traces1):
 
 
 eng2d_list = [
-  statmoments.bivar_2pass,
-  statmoments.bivar_txtbk,
-  statmoments.bivar_sum,
-  statmoments.bivar_cntr,
-  statmoments.bivar_sum_detrend
+    statmoments.bivar_2pass,
+    statmoments.bivar_txtbk,
+    statmoments.bivar_sum,
+    statmoments.bivar_cntr,
+    statmoments.bivar_sum_detrend
 ]
 
 eng1d_list = [
-  statmoments.univar_sum,
-  statmoments.univar_sum_detrend
+    statmoments.univar_sum,
+    statmoments.univar_sum_detrend
 ]
-
-@pytest.fixture
-def trivial_traces():
-  traces0 = np.array([
-        [2,  4,  5],
-        [4,  6,  7],
-        [3,  3,  9],
-        [9,  7,  6],
-        [2,  5,  3],
-        [9,  1,  8],
-        [7,  8,  4],
-        [4,  2,  0],
-  ], dtype=np.uint8)
-  # traces0 = np.random.uniform(0, 20, (50, 1000)).astype(np.uint8)
-  traces1 = (traces0 + np.sin(traces0) * 3).astype(np.uint8)
-  return traces0, traces1
 
 
 @pytest.mark.parametrize("kernel1d", eng1d_list)
@@ -186,7 +171,7 @@ def test_ttest_1d(kernel1d):
   # Insert different distribution into some points of one batch
   traces0[:, 2:4] = np.random.normal(35, 10, (n0, 2)).astype(traces0.dtype)
   traces1 = np.random.randint(0, 256, (n1, tr_len))
-  eng = statmoments.Univar(tr_len, cl_len, moment=2*max_moment, kernel=kernel1d)
+  eng = statmoments.Univar(tr_len, cl_len, moment=2 * max_moment, kernel=kernel1d)
 
   eng.update(traces0, ['01'] * n0)
   eng.update(traces1, [[1, 0]] * n1)
@@ -267,6 +252,7 @@ def test_same_moms_neg(kernel2d):
   maxsd = find_maxtt(traces_gen, eng)
   nt.assert_array_less(maxsd, 5)
 
+
 @pytest.mark.parametrize("kernel2d", eng2d_list)
 def test_2d_pos(kernel2d):
   cl_len = 1
@@ -289,6 +275,23 @@ def test_2d_pos(kernel2d):
   list(map(test_all, maxsd))
 
 
+@pytest.fixture
+def trivial_traces():
+  traces0 = np.array([
+      [2,  4,   5],
+      [4,  6,  -2],
+      [7,  3,   0],
+      [8,  5,   1],
+      [2,  7,   6],
+      [9,  1,   2],
+      [4,  8,  -4],
+      [1,  2,   8],
+  ], dtype=np.int8)
+  # traces0 = np.random.uniform(0, 20, (50, 10)).astype(np.int8)
+  traces1 = (traces0 + np.sin(traces0) * 3).astype(np.int8)
+  return traces0, traces1
+
+
 @pytest.mark.parametrize("mom", [1, 2, 3, 4, 5])
 @pytest.mark.parametrize("normalized", [True, False])
 def test_moments(trivial_traces, mom, normalized):
@@ -309,7 +312,7 @@ def test_nist(kernel1d):
   ]
 
   tr_len, cl_len, m = 1, 2, 1
-  eng = statmoments.Univar(tr_len, cl_len, moment=2*m, kernel=kernel1d)
+  eng = statmoments.Univar(tr_len, cl_len, moment=2 * m, kernel=kernel1d)
 
   eng.update(traces[0], [[0, 1]] * len(traces[0]))
   eng.update(traces[1], [[1, 0]] * len(traces[1]))
@@ -349,23 +352,6 @@ def test_nist(kernel1d):
   nt.assert_almost_equal(alltt_ne, [[-12.94627], [12.94627]], decimal=5)
 
 
-@pytest.fixture
-def trivial_traces():
-  traces0 = np.array([
-      [2,  4,  5],
-      [4,  6,  7],
-      [7,  3,  9],
-      [8,  5,  6],
-      [2,  7,  3],
-      [9,  1,  8],
-      [4,  8,  4],
-      [1,  2,  0],
-  ], dtype=np.uint8)
-  # traces0 = np.random.uniform(0, 20, (50, 1000)).astype(np.uint8)
-  traces1 = (traces0 + np.sin(traces0) * 3).astype(np.uint8)
-  return traces0, traces1
-
-
 @pytest.mark.parametrize("kernel1d", eng1d_list)
 def test_trivial_1d(trivial_traces, kernel1d):
   m, cl_len = 4, 1
@@ -373,7 +359,7 @@ def test_trivial_1d(trivial_traces, kernel1d):
 
   n0, n1 = len(traces0), len(traces1)
 
-  eng = statmoments.Univar(len(traces0[0]), cl_len, moment=2*m, kernel=kernel1d, acc_min_count=3)
+  eng = statmoments.Univar(len(traces0[0]), cl_len, moment=2 * m, kernel=kernel1d, acc_min_count=3)
   eng.update(traces0, ['0'] * n0)
   eng.update(traces1, ['1'] * n1)
 
@@ -447,4 +433,3 @@ def test_trivial_2d(trivial_traces, kernel2d):
 # Entrance point
 if __name__ == '__main__':
   pytest.main(["-v", __file__ + "::test_ttest_1d"])
-

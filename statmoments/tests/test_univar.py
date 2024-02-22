@@ -10,8 +10,8 @@ from statmoments._statmoments_impl import meanfree
 
 
 eng1d_list = [
-  statmoments.univar_sum,
-  statmoments.univar_sum_detrend
+    statmoments.univar_sum,
+    statmoments.univar_sum_detrend
 ]
 
 
