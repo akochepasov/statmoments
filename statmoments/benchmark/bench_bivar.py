@@ -14,6 +14,7 @@ debug_run = True
 np.random.seed(1)
 np.seterr(all='ignore')
 
+
 def bivar_benchmark():
   params = bl.make_trace_ushort, bl.make_hypotheses, statmoments.Bivar
 
@@ -22,8 +23,7 @@ def bivar_benchmark():
     kernels.append(statmoments.bivar_vtk)
 
   engines = {(k.__name__, m): bl.EngineFactory(*params, kernel=k, moment=m)
-             for k in kernels
-             for m in [2, 3, 4]}
+             for k in kernels for m in [2, 3, 4]}
 
   print('\nVarying trace lengths.')
   cl_len = 1
