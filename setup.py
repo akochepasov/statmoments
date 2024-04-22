@@ -50,7 +50,7 @@ def get_version():
 
 # TODO: Add CUDA
 _cythonize_env = {
-  'CUPY_CUDA_VERSION'    : 124,
+  'CUPY_CUDA_VERSION'    : 115,
   'CUPY_HIP_VERSION'     : 0,
   'CUPY_USE_CUDA_PYTHON' : 0,
 }
@@ -59,7 +59,7 @@ from Cython.Distutils import build_ext
 class build_ext_cupy(build_ext):
   def __init__(self, *argc, **kw):
     super().__init__(*argc, **kw)
-    self.cython_compile_time_env = _cythonize_env
+    # self.cython_compile_time_env = _cythonize_env # Moved to cynthonize
     self.force = True # Always rebuild. TODO: delete this later
 
 
