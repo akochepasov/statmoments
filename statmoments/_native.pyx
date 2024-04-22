@@ -14,7 +14,7 @@ from scipy.special import binom
 cython.declare(USE_VTK = cython.int)
 USE_VTK = 0
 cython.declare(USE_GPU = cython.int)
-USE_GPU = 0
+USE_GPU = 1
 
 def is_vtk_installed():
   if not USE_VTK:
@@ -28,9 +28,9 @@ def is_vtk_installed():
     print("VTK is not installed")
     return False
 
-#if USE_GPU:
-#    from cupy_backends.cuda.libs import cupy_cublas
-#    from cupy import cublas as cupy_cublas
+if USE_GPU:
+    from cupy_backends.cuda.libs import cupy_cublas
+    from cupy import cublas as cupy_cublas
 
 
 ################################ BLAS INTEROP ################################
