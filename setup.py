@@ -17,6 +17,13 @@ kwargs = {}
 basedir = os.path.abspath(os.path.dirname(__file__))
 USE_CYTHON = os.path.isfile(os.path.join(basedir, "statmoments/_native.pyx"))
 
+# cupy compilation settings
+_cythonize_env = {
+  'CUPY_CUDA_VERSION'    : 115,
+  'CUPY_HIP_VERSION'     : 0,
+  'CUPY_USE_CUDA_PYTHON' : 0,
+}
+
 
 def make_ext(modname, filename):
   # This function required for in-place pyximport compilation over pyxbld
@@ -34,10 +41,15 @@ def make_ext(modname, filename):
     # link_args.extend(['/DEBUG'])        # Output PDB in link time
     pass
 
+ # Always rebuild. TODO: delete force later
   ext = cython_extension.Extension(modname,
                              [filename],
                              extra_compile_args=compile_args,
-                             extra_link_args=link_args)
+                             extra_link_args=link_args,
+                             cython_compile_time_env = _cythonize_env,
+                             # cython_gdb = True,
+                             # force = True # always rebuild
+                             )
   return ext
 
 
@@ -48,21 +60,6 @@ def get_version():
     exec(h.read(), None, _version_dict)
   return _version_dict['__version__']
 
-# TODO: Add CUDA
-_cythonize_env = {
-  'CUPY_CUDA_VERSION'    : 115,
-  'CUPY_HIP_VERSION'     : 0,
-  'CUPY_USE_CUDA_PYTHON' : 0,
-}
-
-from Cython.Distutils import build_ext
-class build_ext_cupy(build_ext):
-  def __init__(self, *argc, **kw):
-    super().__init__(*argc, **kw)
-    # self.cython_compile_time_env = _cythonize_env # Moved to cynthonize
-    self.force = True # Always rebuild. TODO: delete this later
-
-
 def store_git_hash():
   try:
     ghash = subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip().decode("utf-8")
@@ -70,7 +67,6 @@ def store_git_hash():
     return False
   with open("statmoments/GIT_VERSION.txt", "w") as h:
     h.write(ghash + "\n")
-  
   return True
 
 
@@ -88,7 +84,6 @@ def main():
   setuptools.setup(
       version=get_version(),
       ext_modules=extensions,
-      cmdclass = {'build_ext' : build_ext_cupy},
       **kwargs)
 
 

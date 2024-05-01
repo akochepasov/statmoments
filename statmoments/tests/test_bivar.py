@@ -202,6 +202,7 @@ def test_trivial(trivial_traces, kernel2d):
   traces0, traces1 = trivial_traces
 
   all_traces = np.vstack((traces0, traces1))
+
   tr_count, tr_len = all_traces.shape
   all_cls = np.zeros((tr_count, cl_len), dtype=np.uint8)
   all_cls[len(traces0):] = 1
@@ -228,4 +229,4 @@ def test_trivial(trivial_traces, kernel2d):
 
 # Entrance point
 if __name__ == '__main__':
-  pytest.main(["-v", __file__ + "::test_init"])
+  pytest.main(["-v", __file__ + "::test_trivial"])

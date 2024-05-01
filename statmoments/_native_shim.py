@@ -1,17 +1,11 @@
-# use_debug, use_pyrex = False, False  # Deployment through wheels
-use_debug, use_pyrex = False, True   # cython code is compiled on import
+use_debug, use_pyrex = False, False  # Deployment through wheels
+# use_debug, use_pyrex = False, True   # cython code is compiled on import
 # use_debug, use_pyrex = True, False   # cython code is interpreted
 
 assert not (use_debug and use_pyrex), "Flags use_debug and use_pyrex cannot be True simultaneously"
 
 if use_pyrex:
   import pyximport
-
-  # TODO: Adding CUDA
-  from pyximport import pyxbuild
-  from setup import build_ext_cupy
-  pyxbuild.build_ext = build_ext_cupy
-
   import numpy as np
 
   pyximport.install(setup_args={
