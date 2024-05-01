@@ -29,11 +29,8 @@ def is_vtk_installed():
     return False
 
 if USE_GPU:
-#    from cupy_backends.cuda.libs import cublas as cython_cublas
-    from cupy import cublas as cupy_cublas
-#    from cupy_backends.cuda.libs import cublas as cupy_cublas_native
-    import cupy as cp
-    from cupy.cuda import device as cupy_device
+  import cupy as cp
+  from cupy import cublas as cupy_cublas
 
 
 
@@ -130,9 +127,6 @@ def ssyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   else:
     scipy_blas.ssyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 1 if uplo != b'U' else 0, 1)
 
-
-
-
 @cython.cfunc
 @cython.inline
 @cython.returns(cython.void)
@@ -149,49 +143,47 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   #assert C.shape[1] == n
 
   # !!! uplo 'L' and 'U' mixed up !!!
+  # !!! therefore reverted transposing !!!
   if cython.compiled:
     if not USE_GPU:
       cython_blas.dsyrk(cython.address(uplo), cython.address(trans), cython.address(n), cython.address(k),
                         cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
                         cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
     else:
-      cython.declare(hndl = intptr_t, uplo_ = cython.int, trans_ = cython.int)
-      cython.declare(devPrtA = size_t, devPrtC = size_t)
+      cython.declare(uplo_ = cython.int, trans_ = cython.int, orig_mode = cython.int)
+      cython.declare(hndl = intptr_t, devPrtA = size_t, devPrtC = size_t)
+
       hndl = cupy_device.get_cublas_handle()
       orig_mode = cython_cublas.getPointerMode(hndl)
-      cython_cublas.setPointerMode(hndl, cython_cublas.CUBLAS_POINTER_MODE_HOST)
-  #    cupy_runtime.setDevice(handle)
-  #
-  #      cython.declare(hndl = intptr_t)
-  #      hndl = cython_cublas.create()
-  #
-      dA = cp.asarray(A.T)
-      dC = cp.asarray(C.T)
-      # devPtrA = cython.cast(size_t, dA.data.ptr)
-      # devPtrC = cython.cast(size_t, dC.data.ptr)
+      # host mode throws "fatal exception: access violation" in dsyrk
+      cython_cublas.setPointerMode(hndl, cython_cublas.CUBLAS_POINTER_MODE_DEVICE)
 
-      uplo_ = cython_cublas.CUBLAS_FILL_MODE_LOWER if uplo != b'U' else cython_cublas.CUBLAS_FILL_MODE_UPPER
-      trans_ = cython_cublas.CUBLAS_OP_T           if uplo != b'T' else cython_cublas.CUBLAS_OP_N
+      dA = cp.asarray(A)
+      dC = cp.asarray(C)
+      devPtrA = cython.cast(size_t, dA.data.ptr)
+      devPtrC = cython.cast(size_t, dC.data.ptr)
+
+      uplo_  = cython_cublas.CUBLAS_FILL_MODE_LOWER if uplo != b'U' else cython_cublas.CUBLAS_FILL_MODE_UPPER
+      trans_ = cython_cublas.CUBLAS_OP_N            if uplo != b'N' else cython_cublas.CUBLAS_OP_T
 
       a = cp.array(alpha, dtype=dA.dtype)
-      a_ptr = a.data.ptr
-      b = cp.array(beta, dtype=dA.dtype)
-      b_ptr = b.data.ptr
+      b = cp.array(beta,  dtype=dA.dtype)
 
-      # fatal exception: access violation
-      # cython_cublas.dsyrk(hndl, uplo_, trans_, n, k,
-      #   a_ptr, dA.data.ptr, lda,
-      #   b_ptr, dC.data.ptr, ldc)
+      cython_cublas.dsyrk(hndl, uplo_, trans_, n, k,
+        a.data.ptr, devPtrA, lda,
+        b.data.ptr, devPtrC, ldc)
+
+      # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC)
       cython_cublas.setPointerMode(hndl, orig_mode)
   else:
     if not USE_GPU:
       scipy_blas.dsyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 1 if uplo != b'U' else 0, 1)
     else:
-      dA = cp.asarray(A.T)
-      dC = cp.asarray(C.T)
-      trans_ = trans.decode() if isinstance(trans, bytes) else trans
-      cupy_cublas.syrk(trans_, dA, dC, alpha, beta, 1 if uplo != b'U' else 0)
+      dA = cp.asarray(A)
+      dC = cp.asarray(C)
+      trans_ = cupy_cublas.cublas.CUBLAS_OP_N if trans != b'N' else cupy_cublas.cublas.CUBLAS_OP_T
+      cupy_cublas.syrk(trans_, dA, dC, alpha, beta, 0 if uplo != b'U' else 1)
       np.asarray(C)[:] = cp.asnumpy(dC)
 
 @cython.cfunc
