@@ -17,12 +17,22 @@ kwargs = {}
 basedir = os.path.abspath(os.path.dirname(__file__))
 USE_CYTHON = os.path.isfile(os.path.join(basedir, "statmoments/_native.pyx"))
 
-# cupy compilation settings
-_cythonize_env = {
-  'CUPY_CUDA_VERSION'    : 115,
-  'CUPY_HIP_VERSION'     : 0,
-  'CUPY_USE_CUDA_PYTHON' : 0,
-}
+USE_CUPY_CUDA = 0
+_cythonize_env = { 'USE_CUPY_CUDA' : 0 }
+
+try:
+  import cupy as cp
+  from cupy import cublas as cupy_cublas
+  USE_CUPY_CUDA = 1
+  # Compilation settings for cupy and _native.pyx
+  _cythonize_env = {
+    'CUPY_CUDA_VERSION'    : 115,
+    'CUPY_HIP_VERSION'     : 0,
+    'CUPY_USE_CUDA_PYTHON' : 0,
+    'USE_CUPY_CUDA'        : USE_CUPY_CUDA
+  }
+except ModuleNotFoundError:
+  print("Unable to use GPU: cupy is not installed")
 
 
 def make_ext(modname, filename):

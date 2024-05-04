@@ -11,27 +11,34 @@ import numpy as np
 import scipy.linalg.blas as scipy_blas
 from scipy.special import binom
 
-cython.declare(USE_VTK = cython.int)
-USE_VTK = 0
 cython.declare(USE_GPU = cython.int)
-USE_GPU = 1
+USE_GPU = 0
 
-def is_vtk_installed():
-  if not USE_VTK:
-    return False
-
-  try:
-    import vtk
-    print("VTK is installed and used")
-    return True
-  except ModuleNotFoundError:
-    print("VTK is not installed")
-    return False
-
-if USE_GPU:
+try:
   import cupy as cp
   from cupy import cublas as cupy_cublas
+  USE_GPU = 1
+except ModuleNotFoundError:
+  print("Unable to use GPU: cupy is not installed")
 
+def is_cupy_installed():
+  return USE_GPU
+
+
+# VTK is for benchmarking only
+cython.declare(USE_VTK = cython.int)
+USE_VTK = 0
+
+try:
+  import vtk
+  from vtk.util.numpy_support import numpy_to_vtk as np2vtk, vtk_to_numpy as vtk2np
+  print("Using VTK")
+  USE_VTK = 1
+except ModuleNotFoundError:
+  print("VTK is not installed")
+
+def is_vtk_installed():
+  return USE_VTK
 
 
 ################################ BLAS INTEROP ################################
@@ -144,12 +151,16 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
 
   # !!! uplo 'L' and 'U' mixed up !!!
   # !!! therefore reverted transposing !!!
-  if cython.compiled:
-    if not USE_GPU:
-      cython_blas.dsyrk(cython.address(uplo), cython.address(trans), cython.address(n), cython.address(k),
+
+  if USE_GPU == 0:
+    if cython.compiled:
+      cython_blas.dsyrk(cython.address(uplo),  cython.address(trans),   cython.address(n), cython.address(k),
                         cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
-                        cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
+                        cython.address(beta),  cython.address(C[0, 0]), cython.address(ldc))
     else:
+      scipy_blas.dsyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 1 if uplo != b'U' else 0, 1)
+  else:
+    if cython.compiled:
       cython.declare(uplo_ = cython.int, trans_ = cython.int, orig_mode = cython.int)
       cython.declare(hndl = intptr_t, devPrtA = size_t, devPrtC = size_t)
 
@@ -176,9 +187,6 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC)
       cython_cublas.setPointerMode(hndl, orig_mode)
-  else:
-    if not USE_GPU:
-      scipy_blas.dsyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 1 if uplo != b'U' else 0, 1)
     else:
       dA = cp.asarray(A)
       dC = cp.asarray(C)
@@ -1017,11 +1025,6 @@ class bivar_txtbk(_BivarNpassBase):
 
 
 ##################################### VTK #####################################
-# Used for benchmarking only
-if is_vtk_installed():
-  import vtk
-  from vtk.util.numpy_support import numpy_to_vtk as np2vtk, vtk_to_numpy as vtk2np
-
 
 class bivar_vtk(object):
   """A class, using vtk multivariate kernel. Covariance ONLY!!!"""
