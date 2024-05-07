@@ -226,7 +226,11 @@ def dgemm(a, b, c, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
 @cython.locals(i=cython.Py_ssize_t, tr_len=cython.Py_ssize_t)
 def _block_index(i, tr_len):
   j = slice(i, tr_len)
-  k = slice(tr_len * i - (i - 1) * i // 2, tr_len * (i + 1) - (i + 1) * i // 2)
+
+  cython.declare(kfrom=cython.Py_ssize_t, kto=cython.Py_ssize_t)
+  kfrom = tr_len *       i - (i - 1) * i // 2
+  kto   = tr_len * (i + 1) - (i + 1) * i // 2
+  k = slice(kfrom, kto)
   return j, k
 
 
@@ -1236,7 +1240,7 @@ class univar_sum(_AccBase):
     tr_lyt[:, 0] = 1
     tr_lyt_view = tr_lyt[:, 1:].reshape(batch_cnt, moment, tr_len)
 
-    # Step 1: Create trace layout matrix up to moment degree
+    # Step 1: Create layout matrix up to moment degree
     tr_lyt_view[:, 0, :] = traces
     for j in range(1, moment):
       np.multiply(tr_lyt_view[:, 0, :], tr_lyt_view[:, j - 1, :], tr_lyt_view[:, j, :])
