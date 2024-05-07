@@ -169,20 +169,17 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
       # host mode throws "fatal exception: access violation" in dsyrk
       cython_cublas.setPointerMode(hndl, cython_cublas.CUBLAS_POINTER_MODE_DEVICE)
 
-      dA = cp.asarray(A)
-      dC = cp.asarray(C)
-      devPtrA = cython.cast(size_t, dA.data.ptr)
-      devPtrC = cython.cast(size_t, dC.data.ptr)
-
       uplo_  = cython_cublas.CUBLAS_FILL_MODE_LOWER if uplo != b'U' else cython_cublas.CUBLAS_FILL_MODE_UPPER
       trans_ = cython_cublas.CUBLAS_OP_N            if uplo != b'N' else cython_cublas.CUBLAS_OP_T
 
+      dA = cp.asarray(A)
+      dC = cp.asarray(C)
       a = cp.array(alpha, dtype=dA.dtype)
       b = cp.array(beta,  dtype=dA.dtype)
 
       cython_cublas.dsyrk(hndl, uplo_, trans_, n, k,
-        a.data.ptr, devPtrA, lda,
-        b.data.ptr, devPtrC, ldc)
+        a.data.ptr, cython.cast(size_t, dA.data.ptr), lda,
+        b.data.ptr, cython.cast(size_t, dC.data.ptr), ldc)
 
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC)
