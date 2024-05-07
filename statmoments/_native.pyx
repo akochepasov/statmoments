@@ -194,29 +194,59 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
 @cython.cfunc
 @cython.inline
 @cython.returns(cython.void)
-@cython.locals(a='double[:,::1]', b='double[:,::1]', c='double[:,::1]', transa=cython.char, transb=cython.char,
+@cython.locals(A='double[:,::1]', B='double[:,::1]', C='double[:,::1]', transa=cython.char, transb=cython.char,
                alpha=cython.double, beta=cython.double)
-def dgemm(a, b, c, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
+def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
   """ C = alpha * transa(A) * transb(B) + beta * C """
   cython.declare(n=cython.int, m=cython.int, k=cython.int, lda=cython.int, ldb=cython.int, ldc=cython.int)
-  n = cython.cast(cython.int, c.shape[0])
-  m = cython.cast(cython.int, c.shape[1])
-  k = cython.cast(cython.int, a.shape[0] if transa == b'N' else a.shape[1])
-  lda = cython.cast(cython.int, a.shape[1])
-  ldb = cython.cast(cython.int, b.shape[1])
-  ldc = cython.cast(cython.int, c.shape[1])
-  #assert (b.shape[0] if transb == b'N' else b.shape[1]) == n
-  #assert (a.shape[1] if transa == b'N' else a.shape[0]) == m
-  #assert (b.shape[1] if transb == b'N' else b.shape[0]) == k
+  n = cython.cast(cython.int, C.shape[0])
+  m = cython.cast(cython.int, C.shape[1])
+  k = cython.cast(cython.int, A.shape[0] if transa == b'N' else A.shape[1])
+  lda = cython.cast(cython.int, A.shape[1])
+  ldb = cython.cast(cython.int, B.shape[1])
+  ldc = cython.cast(cython.int, C.shape[1])
+  #assert (B.shape[0] if transb == b'N' else B.shape[1]) == n
+  #assert (A.shape[1] if transa == b'N' else A.shape[0]) == m
+  #assert (B.shape[1] if transb == b'N' else B.shape[0]) == k
 
-  if cython.compiled:
-    cython_blas.dgemm(cython.address(transa), cython.address(transb),
+  # if USE_GPU == 0:
+  if True:
+    if cython.compiled:
+      cython_blas.dgemm(cython.address(transa), cython.address(transb),
                       cython.address(m), cython.address(n), cython.address(k),
-                      cython.address(alpha), cython.address(a[0, 0]), cython.address(lda),
-                      cython.address(b[0, 0]), cython.address(ldb),
-                      cython.address(beta), cython.address(c[0, 0]), cython.address(ldc))
+                      cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
+                      cython.address(B[0, 0]), cython.address(ldb),
+                      cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
+    else:
+      scipy_blas.dgemm(alpha, A.T, B.T, beta, C.T, 1 if transa != b'N' else 0, 1 if transb != b'N' else 0, 1)
   else:
-    scipy_blas.dgemm(alpha, a.T, b.T, beta, c.T, 1 if transa != b'N' else 0, 1 if transb != b'N' else 0, 1)
+    if cython.compiled:
+      hndl = cupy_device.get_cublas_handle()
+      orig_mode = cython_cublas.getPointerMode(hndl)
+      # host mode throws "fatal exception: access violation" in dgemm
+      cython_cublas.setPointerMode(hndl, cython_cublas.CUBLAS_POINTER_MODE_DEVICE)
+
+      dA = cp.asarray(A)
+      dB = cp.asarray(B)
+      dC = cp.asarray(C)
+      devPtrA = cython.cast(size_t, dA.data.ptr)
+      devPtrB = cython.cast(size_t, dB.data.ptr)
+      devPtrC = cython.cast(size_t, dC.data.ptr)
+
+      a = cp.array(alpha, dtype=dA.dtype)
+      b = cp.array(beta,  dtype=dA.dtype)
+
+      # cython_cublas.dgemm(...)
+
+      # Copy out and restore mode
+      np.asarray(C)[:] = cp.asnumpy(dC)
+      cython_cublas.setPointerMode(hndl, orig_mode)
+    else:
+      dA = cp.asarray(A)
+      dB = cp.asarray(B)
+      dC = cp.asarray(C)
+      # cupy_cublas.gemm(...)
+      np.asarray(C)[:] = cp.asnumpy(dC)
 
 ################################ LOCAL HELPERS ################################
 @cython.cfunc
