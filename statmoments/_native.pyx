@@ -441,10 +441,6 @@ class _bivar_sum_base(_AccBase):
 
     for ii in range(cl_len):
       n0, n1 = self.counts(ii)
-      if min(n0, n1) < min_cnt:
-        cm[:, moments] = 0
-        yield cm[:, moments]
-        continue
 
       acc0, acc1 = self._accs[ii], self._accs[ii, 1:].T
 
@@ -456,23 +452,26 @@ class _bivar_sum_base(_AccBase):
       raw0 = acc0[1:acc0.shape[0] - 1, 1:].reshape(ma, tr_len, ma, tr_len)
       raw1 = acc1[1:acc1.shape[0] - 0, 1:].reshape(ma, tr_len, ma, tr_len)
 
-      # Get mean
-      cm[0, 0] = acc0[0, 1: 1 + tr_len]
-      cm[1, 0] = acc1[0, 1: 1 + tr_len]
+      for _i in range(2):
+        nn = n0 if _i == 0 else n1
+        raw = raw0 if _i == 0 else raw1
+        acc = acc0 if _i == 0 else acc1
+        if nn < min_cnt:
+          cm[_i, moments] = 0
+          continue
 
-      # and higher raw moments
-      for i in range(maxm - 1):
-        cm[0, i + 1] = raw0[i // 2, :, i // 2 + i % 2, :].diagonal()
-        cm[1, i + 1] = raw1[i // 2, :, i // 2 + i % 2, :].diagonal()
+        # Get mean
+        cm[_i, 0] = acc[0, 1: 1 + tr_len]
 
-      cm[0] *= 1.0 / n0
-      cm[1] *= 1.0 / n1
+        # and higher raw moments
+        for i in range(maxm - 1):
+          cm[_i, i + 1] = raw[i // 2, :, i // 2 + i % 2, :].diagonal()
 
-      _rmoms2cmoms(cm[0], maxm, buf)
-      _rmoms2cmoms(cm[1], maxm, buf)
+        cm[_i] *= 1.0 / nn
 
-      if maxm >= 3 and normalize:
-        for _i in range(2):
+        _rmoms2cmoms(cm[_i], maxm, buf)
+
+        if maxm >= 3 and normalize:
           sd = np.sqrt(cm[_i, 1])
           for i, cmi in enumerate(cm[_i, 2:maxm], 3):
             cmi[:] /= sd ** i
@@ -486,42 +485,32 @@ class _bivar_sum_base(_AccBase):
 
     for ii in range(cl_len):
       n0, n1 = self.counts(ii)
-      acc0, acc1 = self._accs[ii], self._accs[ii, 1:].T
 
-      if min(n0, n1) < min_cnt:
-        retm[:] = 0
-        yield retm
-        continue
+      # Convert to double if accumulator is float
+      acc0 = np.asarray(self._accs[ii],       dtype=np.float64)
+      acc1 = np.asarray(self._accs[ii, 1:].T, dtype=np.float64)
+
+      # Reshape accumulator to a 4D co-sum tensor
+      raw0 = acc0[1:acc0.shape[0] - 1, 1:].reshape(ma, tr_len, ma, tr_len)
+      raw1 = acc1[1:acc1.shape[0] - 0, 1:].reshape(ma, tr_len, ma, tr_len)
 
       # The left and the right degree of the product terms, e.g. xi^1 * xj^3
       for jj, (lm, rm) in enumerate(zip(*moments)):
-        # Convert to double if accumulator is float
-        acc0 = np.asarray(acc0, dtype=np.float64)
-        acc1 = np.asarray(acc1, dtype=np.float64)
+        for _i in range(2):
+          raw = raw0 if _i == 0 else raw1
+          acc = acc0 if _i == 0 else acc1
+          nn = n0 if _i == 0 else n1
 
-        # Reshape accumulator to a 4D co-sum tensor
-        raw0 = acc0[1:acc0.shape[0] - 1, 1:].reshape(ma, tr_len, ma, tr_len)
-        raw1 = acc1[1:acc1.shape[0] - 0, 1:].reshape(ma, tr_len, ma, tr_len)
+          for i in range(tr_len):
+            j, k = _block_index(i, tr_len)
+            if nn < min_cnt:
+              retm[_i, jj, k] = np.zeros(j.stop - j.start)
+              continue
 
-        for i in range(tr_len):
-          j, k = _block_index(i, tr_len)
-          if n0 >= min_cnt:
-            m10 = 1.0 / n0 * acc0[0, 1: 1 + tr_len]
-            retm[0, jj, k] = calc_central_moments(raw0, m10, n0, lm, rm, i, j)
-          else:
-            retm[0, jj, k] = np.zeros(j.stop - j.start)
+            m1 = 1.0 / nn * acc[0, 1: 1 + tr_len]
+            retm[_i, jj, k] = calc_central_moments(raw, m1, nn, lm, rm, i, j)
 
-          if n1 >= min_cnt:
-            m11 = 1.0 / n1 * acc1[0, 1: 1 + tr_len]
-            retm[1, jj, k] = calc_central_moments(raw1, m11, n1, lm, rm, i, j)
-          else:
-            retm[1, jj, k] = np.zeros(j.stop - j.start)
-
-          if (lm + rm) >= 3 and normalize:
-            for _i in range(2):
-              raw = raw0 if _i == 0 else raw1
-              acc = acc0 if _i == 0 else acc1
-              nn = n0 if _i == 0 else n1
+            if (lm + rm) >= 3 and normalize:
               m2 = 1.0 / nn * raw[0, :, 0, :].diagonal()
               m1 = 1.0 / nn * acc[0, 1: 1 + tr_len]
               sd = np.sqrt(m2 - m1 * m1)
@@ -788,6 +777,8 @@ def _std_normalize(arr):
   return arr / np.std(arr, axis=0)
 
 def _sort_meanfree(ret, normalize=False):
+  if len(ret) < 1:
+    return ret
   ret[:] -= np.mean(ret, axis=0)
   if normalize:
     ret[:] = (ret / np.std(ret, axis=0))
@@ -872,27 +863,26 @@ class _BivarNpassBase(_AccBase):
     for ii in range(cl_len):
       cls0 = (self.cls[:, ii] == 0)
       traces_cl = [self.traces[cls0], self.traces[~cls0]]
-      nn = [len(ts) for ts in traces_cl]
-
-      if min(nn) < min_cnt:
-        retm[:, :len(moments)] = 0
-        yield retm[:, :len(moments)]
-        continue
+      n0, n1 = [len(ts) for ts in traces_cl]
 
       for _i in range(2):
         tr_set = traces_cl[_i]
-        n, cm = nn[_i], retm[_i]
-        tr_set_mean = np.mean(tr_set, axis=0)
+        nn = n0 if _i == 0 else n1
+        if nn < min_cnt:
+          retm[_i, :len(moments)] = 0
+          continue
 
+        cm = retm[_i]
+        raw = np.mean(tr_set, axis=0)
         for jj, m in enumerate(moments):
           if m == 1:
-            cm[jj] = tr_set_mean
+            cm[jj] = raw
           else:
-            np.sum((tr_set - tr_set_mean) ** m, axis=0, out=cm[jj])
-            dscal(1.0 / n, cm[jj])
+            np.sum((tr_set - raw) ** m, axis=0, out=cm[jj])
+            dscal(1.0 / nn, cm[jj])
             if m >= 3 and normalize:
-              sd = np.sum((tr_set - tr_set_mean) ** 2, axis=0)
-              dscal(1.0 / n, sd)
+              sd = np.sum((tr_set - raw) ** 2, axis=0)
+              dscal(1.0 / nn, sd)
               np.sqrt(sd, out=sd)
               cm[jj] /= sd ** m
 
