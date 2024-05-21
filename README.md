@@ -61,8 +61,8 @@ The numeric accuracy of results depends on the coefficient of variation (COV) of
   uveng.update(wforms2, classification2)
 
   # Get statistical moments
-  mean       = [cm.copy() for cm in uveng.moments(moments=1)]
-  skeweness  = [cm.copy() for cm in uveng.moments(moments=3)]
+  mean       = [cm.copy() for cm in uveng.moments(moments=1)]  # E(X)
+  skeweness  = [cm.copy() for cm in uveng.moments(moments=3)]  # E(X^3)
 
   # Detect statistical differences in the first-order t-test
   for i, tt in enumerate(statmoments.stattests.ttests(uveng, moment=1)):
@@ -93,12 +93,12 @@ The numeric accuracy of results depends on the coefficient of variation (COV) of
   bveng.update(wforms2, classification2)
 
   # Get bivariate moments
-  covariance    = [cm.copy() for cm in bveng.comoments(moments=(1, 1))]
-  cokurtosis22  = [cm.copy() for cm in bveng.comoments(moments=(2, 2))]
-  cokurtosis13  = [cm.copy() for cm in bveng.comoments(moments=(1, 3))]
+  covariance    = [cm.copy() for cm in bveng.comoments(moments=(1, 1))]  # E(X Y)
+  cokurtosis22  = [cm.copy() for cm in bveng.comoments(moments=(2, 2))]  # E(X^2 Y^2)
+  cokurtosis13  = [cm.copy() for cm in bveng.comoments(moments=(1, 3))]  # E(X^1 Y^3)
 
   # univariate statistical moments are also can be obtained
-  variance   = [cm.copy() for cm in bveng.moments(moments=2)]
+  variance   = [cm.copy() for cm in bveng.moments(moments=2)]  # E(X^2)
 
   # Detect statistical differences in the second order t-test (covariances)
   for i, tt in enumerate(statmoments.stattests.ttests(bveng, moment=(1,1))):
@@ -114,14 +114,12 @@ The numeric accuracy of results depends on the coefficient of variation (COV) of
 ### Performing data analysis from the command line
 
 ```shell
-# Find univariate t-test statistics of skeweness for
-# the first 5000 waveform sample points
-# taken from the HDF5 dataset
+# Find univariate t-test statistics of skeweness for the first
+# 5000 waveform sample points, stored in a HDF5 dataset
 python -m statmoments.univar -i data.h5 -m 3 -r 0:5000
 
-# Find bivariate t-test statistics of covariance for
-# the first 1000 waveform sample points
-# Taken from the HDF5 dataset
+# Find bivariate t-test statistics of covariance for the first
+# 1000 waveform sample points, stored in a HDF5 dataset
 python -m statmoments.bivar -i data.h5 -r 0:1000
 ```
 
