@@ -25,8 +25,7 @@
 **/values.dev.yaml
 *.egg-info
 build
+dist
 .pytest_cache
 LICENSE
 README.md
-
-
