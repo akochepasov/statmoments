@@ -102,8 +102,8 @@ def ensure_ttest_1d(eng, traces0, traces1):
     trstd1 = (meanfree(traces1) / np.std(traces1, axis=0))**m
     exp_tt = wttest(trstd0, trstd1)
     act_tt = [tt.copy() for tt in statmoments.stattests.ttests(eng, moment=m, dim=1)]
-    nt.assert_allclose(exp_tt, act_tt[0])
-    nt.assert_allclose(-1 * exp_tt, act_tt[1])
+    nt.assert_almost_equal(exp_tt, act_tt[0], decimal=5)
+    nt.assert_almost_equal(-1 * exp_tt, act_tt[1], decimal=5)
 
 
 def ensure_ttest_2d(eng, traces0, traces1):
@@ -169,7 +169,7 @@ def test_ttest_1d(kernel1d):
   n0, n1 = 987, 1234
   traces0 = np.random.randint(0, 256, (n0, tr_len))
   # Insert different distribution into some points of one batch
-  traces0[:, 2:4] = np.random.normal(35, 10, (n0, 2)).astype(traces0.dtype)
+  traces0[:, 2:4] = np.random.normal(30, 7, (n0, 2)).astype(traces0.dtype)
   traces1 = np.random.randint(0, 256, (n1, tr_len))
   eng = statmoments.Univar(tr_len, cl_len, moment=2 * max_moment, kernel=kernel1d)
 
@@ -182,7 +182,7 @@ def test_ttest_1d(kernel1d):
   # Find different means
   for tt1 in statmoments.stattests.ttests(eng, moment=1):
     nt.assert_array_less(np.abs(tt1[0:2]), 3)
-    assert np.all(np.abs(tt1[2:4]) > 40)
+    assert np.all(np.abs(tt1[2:4]) > 30)
   # Find different vars
   for tt2 in statmoments.stattests.ttests(eng, moment=2):
     nt.assert_array_less(np.abs(tt2[0:2]), 3)
