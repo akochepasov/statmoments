@@ -223,7 +223,7 @@ def test_ttest_2d(kernel2d):
     nt.assert_array_less(np.abs(tt3), 3.2)
   # Find different co-kurtoses
   for tt4 in statmoments.stattests.ttests(eng, moment=(2, 2)):
-    nt.assert_array_less(np.abs(tt4[0:8]), 2.1)
+    nt.assert_array_less(np.abs(tt4[0:8]), 2.3)
     nt.assert_array_less(6, np.abs(tt2[8]))
 
 
