@@ -454,11 +454,12 @@ class _bivar_sum_base(_AccBase):
 
       for _i in range(2):
         nn = n0 if _i == 0 else n1
+        if nn < min_cnt:
+          cm[_i, moments] = 0.0
+          continue
+
         raw = raw0 if _i == 0 else raw1
         acc = acc0 if _i == 0 else acc1
-        if nn < min_cnt:
-          cm[_i, moments] = 0
-          continue
 
         # Get mean
         cm[_i, 0] = acc[0, 1: 1 + tr_len]
@@ -494,19 +495,18 @@ class _bivar_sum_base(_AccBase):
       raw0 = acc0[1:acc0.shape[0] - 1, 1:].reshape(ma, tr_len, ma, tr_len)
       raw1 = acc1[1:acc1.shape[0] - 0, 1:].reshape(ma, tr_len, ma, tr_len)
 
-      # The left and the right degree of the product terms, e.g. xi^1 * xj^3
-      for jj, (lm, rm) in enumerate(zip(*moments)):
-        for _i in range(2):
+      for _i in range(2):
+        nn = n0 if _i == 0 else n1
+        if nn < min_cnt:
+          retm[_i, :len(moments[0])] = 0.0
+          continue
+
+        # The left and the right degree of the product terms, e.g. xi^1 * xj^3
+        for jj, (lm, rm) in enumerate(zip(*moments)):
           raw = raw0 if _i == 0 else raw1
           acc = acc0 if _i == 0 else acc1
-          nn = n0 if _i == 0 else n1
-
           for i in range(tr_len):
             j, k = _block_index(i, tr_len)
-            if nn < min_cnt:
-              retm[_i, jj, k] = np.zeros(j.stop - j.start)
-              continue
-
             m1 = 1.0 / nn * acc[0, 1: 1 + tr_len]
             retm[_i, jj, k] = calc_central_moments(raw, m1, nn, lm, rm, i, j)
 
@@ -757,18 +757,14 @@ class bivar_cntr(_AccBase):
     triuflatten = _triuflatten_gen(tr_len)
 
     for accs2d, accs_count in zip(self._accs2d, self._cls_count):
-      n0, n1 = accs_count
-      for jj, (lm, rm) in enumerate(zip(*moments)):
-        if n0 >= min_cnt:
-          C = _calc_comoments(1.0 / n0 * accs2d[0], lm, rm, normalize)
-          retm[0, jj] = triuflatten(C)
-        else:
-          retm[0, jj] = 0
-        if n1 >= min_cnt:
-          C = _calc_comoments(1.0 / n1 * accs2d[1], lm, rm, normalize)
-          retm[1, jj] = triuflatten(C)
-        else:
-          retm[1, jj] = 0
+      for _i in range(2):
+        nn = accs_count[_i]
+        if nn < min_cnt:
+          retm[_i, :] = 0
+          continue
+        for jj, (lm, rm) in enumerate(zip(*moments)):
+          C = _calc_comoments(1.0 / nn * accs2d[_i], lm, rm, normalize)
+          retm[_i, jj] = triuflatten(C)
       yield self._retm[:, :len(moments[0])]
 
 
@@ -866,13 +862,13 @@ class _BivarNpassBase(_AccBase):
       n0, n1 = [len(ts) for ts in traces_cl]
 
       for _i in range(2):
-        tr_set = traces_cl[_i]
         nn = n0 if _i == 0 else n1
         if nn < min_cnt:
-          retm[_i, :len(moments)] = 0
+          retm[_i, :len(moments)] = 0.0
           continue
 
         cm = retm[_i]
+        tr_set = traces_cl[_i]
         raw = np.mean(tr_set, axis=0)
         for jj, m in enumerate(moments):
           if m == 1:

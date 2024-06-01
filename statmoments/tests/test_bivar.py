@@ -159,7 +159,7 @@ def test_act_memory_size(kernel2d):
   ems = statmoments.Bivar.estimate_mem_size(tr_len, cl_len, moment, kernel=kernel2d)
   ams = statmoments.Bivar(tr_len, cl_len, kernel=kernel2d, moment=moment).memory_size
 
-  assert abs(ems - ams) <= 1 << 20
+  assert abs(ems - ams) <= 1 << 20  # The memory estimation is within 1MB of actual size
 
 
 @pytest.mark.parametrize("kernel2d", eng2d_list)
