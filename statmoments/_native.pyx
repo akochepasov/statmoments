@@ -272,8 +272,6 @@ def calc_central_moment_general(raw, ave, n, k, l, i, j):
   """ Calculate co-moments for any available moments """
   ave_i = ave[i]  # i is a scalar
   ave_j = ave[j]  # j is a slice such that indices (j, j) add diagonal!
-
-  inv_n = 1.0 / n
   com = (-1) ** (k + l) * (1 - k - l) * n * ave_i ** k * ave_j ** l
 
   for p in range(2, k + 1):
@@ -286,6 +284,8 @@ def calc_central_moment_general(raw, ave, n, k, l, i, j):
     for q in range(1, l + 1):
       Mpq = raw[p - 1, :, q - 1, :][i, j] if p <= q else raw[q - 1, :, p - 1, :][j, i]
       com += (-1) ** (k + l - p - q) * binom(k, p) * binom(l, q) * Mpq * ave_i ** (k - p) * ave_j ** (l - q)
+
+  inv_n = 1.0 / n
   return com * inv_n
 
 @cython.cfunc
@@ -298,12 +298,13 @@ def calc_central_moments(raw, ave, n, lm, rm, i, j):
   ave_j = ave[j]  # j is a slice such that indices (j, j) add diagonal!
 
   # Expressions for conversions raw moments to central moments in the
-  # Horner representation generated with sympy
+  # Horner representation auto-generated with sympy, group order (mu_j, mu_i)
   if False:
     pass # Helps formatting for all cases
   elif lm == 1 and rm == 1:  # E(X Y)
     M_11 = raw[0, :, 0, :]   # 0
-    m = M_11[i, j] * inv_n - ave_i * ave_j
+    m = M_11[i, j] - n * ave_i * ave_j
+    m *= inv_n
   elif lm + rm == 3:         # E(XX Y)
     M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
@@ -311,12 +312,22 @@ def calc_central_moments(raw, ave, n, lm, rm, i, j):
         - ave_i * M_11[j, j].diagonal() \
         + M_12[i, j]
     m *= inv_n
+  elif lm == 1 and rm == 3 or lm == 3 and rm == 1:  # E(XXX Y)
+    M_11 = raw[0, :, 0, :]   # 0
+    M_12 = raw[0, :, 1, :]
+    M_13 = raw[0, :, 2, :]
+    m = ave_j * (3 * ave_i * M_11[j, j].diagonal() - 3 * M_12[i, j] \
+                + ave_j * (3 * M_11[i, j] - 3 * n * ave_i * ave_j)) \
+        - ave_i * M_12[j, j].diagonal() \
+        + M_13[i, j]
+    m *= inv_n
   elif lm == 2 and rm == 2:  # E(XX YY)
     M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
     M_22 = raw[1, :, 1, :]   # 1
-    m = ave_i * (ave_i * M_11[j, j].diagonal() - 2 * M_12[i, j]) \
-        + ave_j * (4 * ave_i * M_11[i, j] + ave_j * (M_11[i, i] - 3 * n * ave_i * ave_i) - 2 * M_12[j, i]) \
+    m = ave_j * (4 * ave_i * M_11[i, j] - 2 * M_12[j, i] \
+                + ave_j * (M_11[i, i] - 3 * n * ave_i * ave_i)) \
+        + ave_i * (ave_i * M_11[j, j].diagonal() - 2 * M_12[i, j]) \
         + M_22[i, j]
     m *= inv_n
   elif lm == 4 and rm == 4:  # E(XXXX YYYY)
@@ -330,15 +341,18 @@ def calc_central_moments(raw, ave, n, lm, rm, i, j):
     M_33 = raw[2, :, 2, :]   # 2
     M_34 = raw[2, :, 3, :]
     M_44 = raw[3, :, 3, :]   # 3
-    m = ave_i * (-4 * M_34[i, j] + ave_i * (6 * M_24[i, j] + ave_i * (M_13[j, j].diagonal() * ave_i - 4 * M_14[i, j]))) \
-        + ave_j * (-4 * M_34[j, i] \
-                     + ave_i * (16 * M_33[i, j] + ave_i * (-24 * M_23[i, j] + ave_i * (-4 * M_12[j, j].diagonal() * ave_i + 16 * M_13[i, j]))) \
-                     + ave_j * (6 * M_24[j, i] \
-                                  + ave_i * (-24 * M_23[j, i] + ave_i * (36 * M_22[i, j] + ave_i * ((6 * ave_i) * M_11[j, j].diagonal() - 24 * M_12[i, j]))) \
-                                  + ave_j * (-4 * M_14[j, i] \
-                                               + ave_i * (16 * M_13[j, i] + ave_i * (16 * ave_i * M_11[i, j] - 24 * M_12[j, i])) \
-                                               + ave_j * (M_13[i, i] \
-                                                            + ave_i * (-4 * M_12[i, i] + ave_i * (6 * M_11[i, i] - 7* n * ave_i ** 2)))))) \
+    m = ave_j * (-4 * M_34[j, i] \
+                + ave_i * (16 * M_33[i, j] \
+                          + ave_i * (-24 * M_23[i, j] + ave_i * (-4 * M_12[j, j].diagonal() * ave_i + 16 * M_13[i, j]))) \
+                + ave_j * (6 * M_24[j, i] \
+                          + ave_i * (-24 * M_23[j, i] \
+                                    + ave_i * (36 * M_22[i, j] \
+                                              + ave_i * ((6 * ave_i) * M_11[j, j].diagonal() - 24 * M_12[i, j]))) \
+                          + ave_j * (-4 * M_14[j, i] \
+                                    + ave_i * (16 * M_13[j, i] + ave_i * (16 * ave_i * M_11[i, j] - 24 * M_12[j, i])) \
+                                    + ave_j * (M_13[i, i] \
+                                              + ave_i * (-4 * M_12[i, i] + ave_i * (6 * M_11[i, i] - 7* n * ave_i ** 2)))))) \
+        + ave_i * (-4 * M_34[i, j] + ave_i * (6 * M_24[i, j] + ave_i * (M_13[j, j].diagonal() * ave_i - 4 * M_14[i, j]))) \
         + M_44[i, j]
     m *= inv_n
   else:
