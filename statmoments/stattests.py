@@ -10,13 +10,14 @@ from ._statmoments_impl import triu_flatten
 
 
 def ttests(engine, moment=None, dim=None, equal_var=False):
-  """Return a generator yielding Welch's t-test for each classifier"""
+  """Return a generator yielding the independed samples Welch's t-test for each classifier"""
 
   test_dim = dim    if dim    is not None else engine.dim
   test_mom = moment if moment is not None else engine.moment // 2
 
   if engine.moment < 2 or engine.moment // 2 < np.max(test_mom):
-    raise ValueError("The engine cannot provide required statistical moments.")
+    emsg = "The engine cannot provide required statistical moments. Increase the engine moment"
+    raise ValueError(emsg)
 
   mom_conv = [
       {  # Empty
