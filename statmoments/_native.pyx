@@ -285,8 +285,7 @@ def calc_central_moment_general(raw, ave, n, k, l, i, j):
       Mpq = raw[p - 1, :, q - 1, :][i, j] if p <= q else raw[q - 1, :, p - 1, :][j, i]
       com += (-1) ** (k + l - p - q) * binom(k, p) * binom(l, q) * Mpq * ave_i ** (k - p) * ave_j ** (l - q)
 
-  inv_n = 1.0 / n
-  return com * inv_n
+  return com
 
 @cython.cfunc
 @cython.locals(n=cython.double, lm=cython.int, rm=cython.int, i=cython.int)
@@ -304,14 +303,12 @@ def calc_central_moments(raw, ave, n, lm, rm, i, j):
   elif lm == 1 and rm == 1:  # E(X Y)
     M_11 = raw[0, :, 0, :]   # 0
     m = M_11[i, j] - n * ave_i * ave_j
-    m *= inv_n
   elif lm + rm == 3:         # E(XX Y)
     M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
     m = ave_j * (2 * n * ave_i * ave_j - 2 * M_11[i, j]) \
         - ave_i * M_11[j, j].diagonal() \
         + M_12[i, j]
-    m *= inv_n
   elif lm == 1 and rm == 3 or lm == 3 and rm == 1:  # E(XXX Y)
     M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
@@ -320,7 +317,6 @@ def calc_central_moments(raw, ave, n, lm, rm, i, j):
                 + ave_j * (3 * M_11[i, j] - 3 * n * ave_i * ave_j)) \
         - ave_i * M_12[j, j].diagonal() \
         + M_13[i, j]
-    m *= inv_n
   elif lm == 2 and rm == 2:  # E(XX YY)
     M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
@@ -329,7 +325,6 @@ def calc_central_moments(raw, ave, n, lm, rm, i, j):
                 + ave_j * (M_11[i, i] - 3 * n * ave_i * ave_i)) \
         + ave_i * (ave_i * M_11[j, j].diagonal() - 2 * M_12[i, j]) \
         + M_22[i, j]
-    m *= inv_n
   elif lm == 4 and rm == 4:  # E(XXXX YYYY)
     M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
@@ -354,10 +349,10 @@ def calc_central_moments(raw, ave, n, lm, rm, i, j):
                                               + ave_i * (-4 * M_12[i, i] + ave_i * (6 * M_11[i, i] - 7* n * ave_i ** 2)))))) \
         + ave_i * (-4 * M_34[i, j] + ave_i * (6 * M_24[i, j] + ave_i * (M_13[j, j].diagonal() * ave_i - 4 * M_14[i, j]))) \
         + M_44[i, j]
-    m *= inv_n
   else:
     m = calc_central_moment_general(raw, ave, n, lm, rm, i, j)
 
+  m *= inv_n
   return m
 
 
@@ -370,9 +365,9 @@ class _bivar_sum_base(_AccBase):
     self._dtype = kwargs.pop('acctype', np.float64)
 
     # Buffers for operations to avoid reallocations
-    self._buf    = np.empty((3, trace_len), dtype=self._dtype)  # BLAS ops buffer
     self._layout = np.empty((exp_traces, moment * trace_len + 1), dtype=self._dtype)
     self._retm   = np.empty((2, 2, trace_len * (trace_len + 1) // 2), dtype=np.float64)
+    self._buf    = np.empty((3, trace_len), dtype=self._retm.dtype)  # BLAS ops buffer
 
     # Accumulators
     # acc0 is upper triangle of accs[:,:-1], acc1 is lower triangle of accs[:, 1:]
@@ -387,7 +382,7 @@ class _bivar_sum_base(_AccBase):
     lytsz      = exp_traces * (moment * tr_len + 1)
     accssz     = cl_len * (moment * tr_len + 1) ** 2
     ttsz       = 2 * 2 * tr_len * tr_len // 2
-    return (lytsz + accssz + bufsz) * np.finfo(acc_dtype).bits // 8 + ttsz * 8
+    return (lytsz + accssz) * np.finfo(acc_dtype).bits // 8 + (bufsz + ttsz) * 8
 
   def memory_size(self):
     mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
@@ -1132,19 +1127,17 @@ class univar_sum(_AccBase):
   def __init__(self, trace_len, classifier_len, **kwargs):
     super().__init__(trace_len, classifier_len, **kwargs)
 
-    self._dtype = kwargs.pop('acctype', np.float64)
-    exp_traces = 50  # Guesstimate the number of traces in the input batch
-
-    # Accumulators and layouts
     moment = self.moment
+    exp_traces = 50  # Guesstimate the number of traces in the input batch
+    self._dtype = kwargs.pop('acctype', np.float64)
 
     # Buffers for operations to avoid reallocations
-    self._buf    = np.empty((3, trace_len), dtype=self._dtype)  # BLAS ops buffer
     self._layout = np.empty((exp_traces, moment * trace_len + 1), dtype=self._dtype)
-    self._accs   = np.zeros((classifier_len + 1, moment * trace_len + 1), dtype=self._dtype)
+    self._retm   = np.empty((2, moment, trace_len), dtype=np.float64)
+    self._buf    = np.empty((3, trace_len), dtype=self._retm.dtype)  # BLAS ops buffer
 
-    # Buffers for raw/central moments transformation
-    self._retm = np.empty((2, moment, trace_len), dtype=np.float64)
+    # Accumulators
+    self._accs   = np.zeros((classifier_len + 1, moment * trace_len + 1), dtype=self._dtype)
 
   @staticmethod
   def estimate_mem_size(tr_len, cl_len=1, moment=2):
@@ -1154,7 +1147,7 @@ class univar_sum(_AccBase):
     accssz     = (cl_len + 1) * (moment * tr_len + 1)
     bufsz      = 3 * tr_len
     ttsz       = 2 * moment * tr_len
-    return (lytsz + accssz + bufsz) * np.finfo(acc_dtype).bits // 8 + ttsz * 8
+    return (lytsz + accssz) * np.finfo(acc_dtype).bits // 8 + (bufsz + ttsz) * 8
 
   def memory_size(self):
     mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
