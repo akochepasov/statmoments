@@ -258,7 +258,8 @@ class _AccBase(object):
 @cython.cfunc
 @cython.returns(cython.void)
 @cython.locals(M = 'double[:, ::1]', moment='int', tmpbuf = 'double[:, ::1]')
-def _rmoms2cmoms(M, moment, tmpbuf):
+def _rmoms2cmoms1D(M, moment, tmpbuf):
+  """Convert raw moments to central moments"""
   # Non-Horner method
   cython.declare(k='int', p='int')
   cython.declare(terms='double[::1]')
@@ -279,8 +280,8 @@ def _rmoms2cmoms(M, moment, tmpbuf):
     dsbmv(M0p[p % 2], M[p - 1], terms, (-1.0) ** (k - p) * (k - p), 1.0)
     dsbmv(M[0], terms, M[k - 1], 1.0, 1.0)
 
-def calc_central_moment_general(raw, ave, n, k, l, i, j):
-  """ Calculate co-moments for any available moments """
+def _rmoms2cmoms2D_general(raw, ave, n, k, l, i, j):
+  """Convert raw co-moments to central co-moments in a general fashion"""
   ave_i = ave[i]  # i is a scalar
   ave_j = ave[j]  # j is a slice such that indices (j, j) add diagonal!
   com = (-1) ** (k + l) * (1 - k - l) * n * ave_i ** k * ave_j ** l
@@ -300,8 +301,11 @@ def calc_central_moment_general(raw, ave, n, k, l, i, j):
 
 @cython.cfunc
 @cython.locals(n=cython.double, lm=cython.int, rm=cython.int, i=cython.int)
-def calc_central_moments(raw, ave, n, lm, rm, i, j):
-  """Optimized for moments (1, 1) and (2, 2). For others calc_central_moment_general is called"""
+def _rmoms2cmoms2D(raw, ave, n, lm, rm, i, j):
+  """Convert raw co-moments to central co-moments
+
+  This coversion is optimized for a few co-moments, e.(1, 1) and (2, 2).
+  Others are calculated more slowly in a general fashion"""
 
   inv_n = 1.0 / n
   ave_i = ave[i]  # i is a scalar
@@ -361,7 +365,7 @@ def calc_central_moments(raw, ave, n, lm, rm, i, j):
         + ave_i * (-4 * M_34[i, j] + ave_i * (6 * M_24[i, j] + ave_i * (M_13[j, j].diagonal() * ave_i - 4 * M_14[i, j]))) \
         + M_44[i, j]
   else:
-    m = calc_central_moment_general(raw, ave, n, lm, rm, i, j)
+    m = _rmoms2cmoms2D_general(raw, ave, n, lm, rm, i, j)
 
   m *= inv_n
   return m
@@ -490,7 +494,7 @@ class _bivar_sum_base(_AccBase):
 
         cm[_i] *= 1.0 / nn
 
-        _rmoms2cmoms(cm[_i], maxm, buf)
+        _rmoms2cmoms1D(cm[_i], maxm, buf)
 
         if maxm >= 3 and normalize:
           sd = np.sqrt(cm[_i, 1])
@@ -528,7 +532,7 @@ class _bivar_sum_base(_AccBase):
           for i in range(tr_len):
             j, k = _block_index(i, tr_len)
             m1 = 1.0 / nn * acc[0, 1: 1 + tr_len]
-            retm[_i, jj, k] = calc_central_moments(raw, m1, nn, lm, rm, i, j)
+            retm[_i, jj, k] = _rmoms2cmoms2D(raw, m1, nn, lm, rm, i, j)
 
             if (lm + rm) >= 3 and normalize:
               m2 = 1.0 / nn * raw[0, :, 0, :].diagonal()
@@ -1123,14 +1127,16 @@ class bivar_vtk(object):
 @cython.cfunc
 @cython.returns('void')
 @cython.locals(rm='double[::1]', sums1='double[::1]', n='int')
-def _rawsums2rawmoments_acc0(sums1, rm, n):
+def _rsums2rmoms_acc0(sums1, rm, n):
+  """Convert raw sums to raw moments"""
   daxpy(sums1, rm, -1.0)
   dscal(1.0 / n, rm)
 
 @cython.cfunc
 @cython.returns('void')
 @cython.locals(rm1='double[::1]', sums1='double[::1]', n='int')
-def _rawsums2rawmoments_acc1(sums1, rm1, n):
+def _rsums2rmoms_acc1(sums1, rm1, n):
+  """Convert raw sums to raw moments"""
   daxpy(sums1, rm1, 1.0 / n)
 
 
@@ -1189,11 +1195,11 @@ class univar_sum(_AccBase):
       cm[1][:] = 0.0          #  cm1 =         acc[ii]  / nn[1] # Has to be zeroed out
 
       # TODO: Shorten the accumulator to convert
-      _rawsums2rawmoments_acc0(acc1.ravel(), cm[0].ravel(), max(1, nn[0]))
-      _rawsums2rawmoments_acc1(acc1.ravel(), cm[1].ravel(), max(1, nn[1]))
+      _rsums2rmoms_acc0(acc1.ravel(), cm[0].ravel(), max(1, nn[0]))
+      _rsums2rmoms_acc1(acc1.ravel(), cm[1].ravel(), max(1, nn[1]))
 
-      _rmoms2cmoms(cm[0], maxm, buf)
-      _rmoms2cmoms(cm[1], maxm, buf)
+      _rmoms2cmoms1D(cm[0], maxm, buf)
+      _rmoms2cmoms1D(cm[1], maxm, buf)
 
       if maxm >= 3 and normalize:
         for _i in range(2):
