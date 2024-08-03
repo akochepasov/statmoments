@@ -255,18 +255,29 @@ class _AccBase(object):
 
 ########################## BIVARIATE IMPLEMENTATIONS ##########################
 
-#@cython.cfunc
-#@cython.returns('double[:, ::1]')
-#@cython.locals(M = 'double[:, ::1]', moment='int', tmpbuf = 'double[:, ::1]')
+@cython.cfunc
+@cython.returns(cython.void)
+@cython.locals(M = 'double[:, ::1]', moment='int', tmpbuf = 'double[:, ::1]')
 def _rmoms2cmoms(M, moment, tmpbuf):
+  # Non-Horner method
   cython.declare(k='int', p='int')
-
-  for k in range(moment, 0, -1):
-    for p in range(2, k):
-      M[k - 1] += (-1) ** (k - p) * binom(k, p) * M[p - 1] * np.power(M[0], k - p)
-    M[k - 1] += (-1) ** (k - 1) * (k - 1) * np.power(M[0], k)
-
-  return M
+  cython.declare(terms='double[::1]')
+  cython.declare(M0p='double[:, ::1]')
+  terms = tmpbuf[2]
+  M0p = tmpbuf[:2]
+  for k in range(moment, 1, -1):
+    terms[:] = 0.0
+    M0p[(k + 1) % 2, :] = 1.0
+    for p in range(k - 1, 1, -1):
+      # terms += (-1) ** (k - p) * binom(k, p) * M[p - 1] * M0p[p % 2]
+      # M0p[(p + 1)%2, :] = M[0] * M0p[p % 2]
+      dsbmv(M0p[p % 2], M[p - 1], terms, (-1.0) ** (k - p) * binom(k, p), 1.0)
+      dsbmv(M[0], M0p[p % 2], M0p[(p + 1) % 2], 1.0)
+    p = 1
+    # terms += (-1) ** (k - p) * (k - p) * M[p - 1] * M0p[p % 2]
+    # M[k - 1] += M[0] * terms
+    dsbmv(M0p[p % 2], M[p - 1], terms, (-1.0) ** (k - p) * (k - p), 1.0)
+    dsbmv(M[0], terms, M[k - 1], 1.0, 1.0)
 
 def calc_central_moment_general(raw, ave, n, k, l, i, j):
   """ Calculate co-moments for any available moments """
@@ -299,11 +310,11 @@ def calc_central_moments(raw, ave, n, lm, rm, i, j):
   # Expressions for conversions raw moments to central moments in the
   # Horner representation auto-generated with sympy, group order (mu_j, mu_i)
   if False:
-    pass # Helps formatting for all cases
+    pass # Unifies formatting idents for cases
   elif lm == 1 and rm == 1:  # E(X Y)
     M_11 = raw[0, :, 0, :]   # 0
     m = M_11[i, j] - n * ave_i * ave_j
-  elif lm + rm == 3:         # E(XX Y)
+  elif lm == 1 and rm == 2 or lm == 2 and rm == 1:  # E(XX Y)
     M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
     m = ave_j * (2 * n * ave_i * ave_j - 2 * M_11[i, j]) \
