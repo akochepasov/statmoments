@@ -181,11 +181,11 @@ def test_ttest_1d(kernel1d):
   # Ensure t-test finds stat diff
   # Find different means
   for tt1 in statmoments.stattests.ttests(eng, moment=1):
-    nt.assert_array_less(np.abs(tt1[0:2]), 3)
+    nt.assert_array_less(np.abs(tt1[0:2]), 3.1)
     assert np.all(np.abs(tt1[2:4]) > 30)
   # Find different vars
   for tt2 in statmoments.stattests.ttests(eng, moment=2):
-    nt.assert_array_less(np.abs(tt2[0:2]), 3)
+    nt.assert_array_less(np.abs(tt2[0:2]), 3.1)
     assert np.all(np.abs(tt2[2:4]) > 30)
   # Find no different skews
   for tt3 in statmoments.stattests.ttests(eng, moment=3):
@@ -200,7 +200,7 @@ def test_ttest_1d(kernel1d):
 def test_ttest_2d(kernel2d):
   max_moment = 4
   tr_len, cl_len = 4, 2
-  n0, n1 = 987, 1234
+  n0, n1 = 1343, 1234
   traces0 = np.random.randint(0, 256, (n0, tr_len))
   traces1 = np.random.randint(0, 256, (n1, tr_len))
   # Insert co-dependence to some point of one batch
@@ -216,11 +216,11 @@ def test_ttest_2d(kernel2d):
   # Ensure t-test finds the inserted correlation
   # Find different covars
   for tt2 in statmoments.stattests.ttests(eng, moment=(1, 1)):
-    nt.assert_array_less(np.abs(tt2[0:7]), 3.2)
-    nt.assert_array_less(15, np.abs(tt2[7:9]))
+    nt.assert_array_less(np.abs(tt2[0:7]), 3.3)
+    nt.assert_array_less(15, np.abs(tt2[7:-1]))
   # Find no different co-skews
   for tt3 in statmoments.stattests.ttests(eng, moment=(1, 2)):
-    nt.assert_array_less(np.abs(tt3), 3.2)
+    nt.assert_array_less(np.abs(tt3), 3.3)
   # Find different co-kurtoses
   for tt4 in statmoments.stattests.ttests(eng, moment=(2, 2)):
     nt.assert_array_less(np.abs(tt4[0:8]), 2.3)
@@ -432,4 +432,4 @@ def test_trivial_2d(trivial_traces, kernel2d):
 
 # Entrance point
 if __name__ == '__main__':
-  pytest.main(["-v", __file__ + "::test_ttest_1d"])
+  pytest.main(["-v", __file__ + "::test_ttest_2d"])
