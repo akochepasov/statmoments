@@ -3,7 +3,6 @@
 
 # Papers to research numerical stability:
 #  W. Kahan "Further remarks on reducing truncation errors", 1965
-#  B.P. Welford "Note on a method for calculating corrected sums of squares and products", 1962
 #  D.H.D. West "Updating mean and Variance Estimates: An improved method", 1979
 
 import cython
@@ -115,8 +114,8 @@ def ssyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   k = cython.cast(cython.int, A.shape[0] if trans == b'N' else A.shape[1])
   lda = cython.cast(cython.int, A.shape[1])
   ldc = cython.cast(cython.int, C.shape[1])
-  #assert (A.shape[1] if trans == b'N' else A.shape[0]) == n
-  #assert C.shape[1] == n
+  # assert (A.shape[1] if trans == b'N' else A.shape[0]) == n
+  # assert C.shape[1] == n
 
   # !!! uplo 'L' and 'U' mixed up !!!
   if cython.compiled:
@@ -138,38 +137,24 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   k = cython.cast(cython.int, A.shape[0] if trans == b'N' else A.shape[1])
   lda = cython.cast(cython.int, A.shape[1])
   ldc = cython.cast(cython.int, C.shape[1])
-  #assert (A.shape[1] if trans == b'N' else A.shape[0]) == n
-  #assert C.shape[1] == n
+  # assert (A.shape[1] if trans == b'N' else A.shape[0]) == n
+  # assert C.shape[1] == n
 
-  # !!! uplo 'L' and 'U' mixed up !!!
   if cython.compiled:
     #    if not USE_GPU:
+    uplo = b'U' if uplo != b'U' else b'L'
     cython_blas.dsyrk(cython.address(uplo), cython.address(trans), cython.address(n), cython.address(k),
                       cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
                       cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
-  #    else:
-  #      cython.declare(device = cython.int, uplo_ = cython.int, trns_ = cython.int)
-  #      cython.declare(devPrtA = cython.p_double, devPrtC = cython.p_double)
-  #      device = cython.cast(cython.int, cublas_runtime.getDevice())
-  #      cublas_runtime.setDevice(device)
-  #
-  #      cython.declare(hndl = intptr_t)
-  #      hndl = cython_cublas.create()
-  #
-  #      uplo_ = cython_cublas.CUBLAS_FILL_MODE_LOWER if uplo != b'U' else cython_cublas.CUBLAS_FILL_MODE_UPPER
-  #      trns_ = cython_cublas.CUBLAS_OP_T            if uplo != b'T' else cython_cublas.CUBLAS_OP_N
-  #
-  #      cython_cublas.dsyrk(hndl, uplo_, trns_, n, k,
-  #        cython.cast(size_t, cython.address(alpha)), cython.cast(size_t, cython.address(A[0, 0])), lda,
-  #        cython.cast(size_t, cython.address(beta)), cython.cast(size_t, cython.address(C[0, 0])), ldc)
   else:
-    #    cupy_cublas.syrk(trans, A.T, C.T, alpha, beta, 1 if uplo != b'U' else 0)
-    scipy_blas.dsyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 1 if uplo != b'U' else 0, 1)
+    # A and C have to be transposed to comply with F-order
+    scipy_blas.dsyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 0 if uplo != b'U' else 1, 1)
 
 @cython.cfunc
 @cython.inline
 @cython.returns(cython.void)
-@cython.locals(a='double[:,::1]', b='double[:,::1]', c='double[:,::1]', transa=cython.char, transb=cython.char,
+@cython.locals(a='double[:,::1]', b='double[:,::1]', c='double[:,::1]',
+               transa=cython.char, transb=cython.char,
                alpha=cython.double, beta=cython.double)
 def dgemm(a, b, c, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
   """ C = alpha * transa(A) * transb(B) + beta * C """
@@ -180,9 +165,9 @@ def dgemm(a, b, c, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
   lda = cython.cast(cython.int, a.shape[1])
   ldb = cython.cast(cython.int, b.shape[1])
   ldc = cython.cast(cython.int, c.shape[1])
-  #assert (b.shape[0] if transb == b'N' else b.shape[1]) == n
-  #assert (a.shape[1] if transa == b'N' else a.shape[0]) == m
-  #assert (b.shape[1] if transb == b'N' else b.shape[0]) == k
+  # assert (b.shape[0] if transb == b'N' else b.shape[1]) == n
+  # assert (a.shape[1] if transa == b'N' else a.shape[0]) == m
+  # assert (b.shape[1] if transb == b'N' else b.shape[0]) == k
 
   if cython.compiled:
     cython_blas.dgemm(cython.address(transa), cython.address(transb),
@@ -436,19 +421,19 @@ class _bivar_sum_base(_AccBase):
       if n0 > 0:
         # syrk: acc0 += T0 * T0.T
         if tr_lyt.dtype == np.float64:
-          dsyrk(tr_lyt[:n0], self._accs[i, :-1], b'L')
+          dsyrk(tr_lyt[:n0], self._accs[i, 1:], b'L')
         else:
-          ssyrk(tr_lyt[:n0], self._accs[i, :-1], b'L')
+          ssyrk(tr_lyt[:n0], self._accs[i, 1:], b'L')
       if n1 > 0:
         # syrk: acc1 += T1 * T1.T
         if tr_lyt.dtype == np.float64:
-          dsyrk(tr_lyt[n0:], self._accs[i, 1:], b'U')
+          dsyrk(tr_lyt[n0:], self._accs[i, :-1], b'U')
         else:
-          ssyrk(tr_lyt[n0:], self._accs[i, 1:], b'U')
+          ssyrk(tr_lyt[n0:], self._accs[i, :-1], b'U')
 
   def counts(self, i):
     accs = self._accs[i]
-    acc0, acc1 = accs, accs[1:].T
+    acc1, acc0 = accs, accs[1:].T
     return acc0[0, 0], acc1[0, 0]
 
   def _moments(self, moments, normalize):
@@ -466,15 +451,15 @@ class _bivar_sum_base(_AccBase):
     for ii in range(cl_len):
       n0, n1 = self.counts(ii)
 
-      acc0, acc1 = self._accs[ii], self._accs[ii, 1:].T
+      acc1, acc0 = self._accs[ii], self._accs[ii, 1:].T
 
       # Convert to double if accumulator is float
       acc0 = np.asarray(acc0, dtype=np.float64)
       acc1 = np.asarray(acc1, dtype=np.float64)
 
       # Reshape accumulator to a co-moment tensor
-      raw0 = acc0[1:acc0.shape[0] - 1, 1:].reshape(ma, tr_len, ma, tr_len)
-      raw1 = acc1[1:acc1.shape[0] - 0, 1:].reshape(ma, tr_len, ma, tr_len)
+      raw0 = acc0[1:acc0.shape[0] - 0, 1:].reshape(ma, tr_len, ma, tr_len)
+      raw1 = acc1[1:acc1.shape[0] - 1, 1:].reshape(ma, tr_len, ma, tr_len)
 
       for _i in range(2):
         nn = n0 if _i == 0 else n1
@@ -512,12 +497,12 @@ class _bivar_sum_base(_AccBase):
       n0, n1 = self.counts(ii)
 
       # Convert to double if accumulator is float
-      acc0 = np.asarray(self._accs[ii],       dtype=np.float64)
-      acc1 = np.asarray(self._accs[ii, 1:].T, dtype=np.float64)
+      acc0 = np.asarray(self._accs[ii, 1:].T, dtype=np.float64)
+      acc1 = np.asarray(self._accs[ii, 0:],   dtype=np.float64)
 
       # Reshape accumulator to a 4D co-sum tensor
-      raw0 = acc0[1:acc0.shape[0] - 1, 1:].reshape(ma, tr_len, ma, tr_len)
-      raw1 = acc1[1:acc1.shape[0] - 0, 1:].reshape(ma, tr_len, ma, tr_len)
+      raw0 = acc0[1:acc0.shape[0] - 0, 1:].reshape(ma, tr_len, ma, tr_len)
+      raw1 = acc1[1:acc1.shape[0] - 1, 1:].reshape(ma, tr_len, ma, tr_len)
 
       for _i in range(2):
         nn = n0 if _i == 0 else n1
@@ -815,7 +800,7 @@ def _uni2bivar(traces, tmp, ret, m1, m2):
   n = cython.cast(cython.int, traces.shape[1])
   triuflatten, C = _triuflatten_gen(n), tmp
   for j in range(m):
-    dsyrk(traces[j, np.newaxis] ** m1, C, b'L', b'N', 1.0, 0.0)                               # m1 == m2
+    dsyrk(traces[j, np.newaxis] ** m1, C, b'U', b'N', 1.0, 0.0)                               # m1 == m2
     if cython.compiled:
       ret[j, :] = triuflatten(C.base)
     else:
@@ -938,7 +923,7 @@ class bivar_2pass(_BivarNpassBase):
 
         for jj, (lm, rm) in enumerate(zip(*moments)):
           if lm == rm:
-            dsyrk(mft ** lm,            C, b'L', b'N', 1.0, 0.0)
+            dsyrk(mft ** lm,            C, b'U', b'N', 1.0, 0.0)
           else:
             dgemm(mft ** rm, mft ** lm, C, b'N', b'T', 1.0, 0.0)
           retm[jj] = triuflatten(C) / m
