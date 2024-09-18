@@ -6,7 +6,7 @@ import numpy as np
 from ._native_shim import ttest
 from ._native import _preprocvar  # Is not imported otherwise
 
-from ._statmoments_impl import triu_flatten
+from .common import triu_flatten
 
 
 def ttests(engine, moment=None, dim=None, equal_var=False):

@@ -6,7 +6,7 @@ from scipy.stats import skew, kurtosis
 
 import statmoments
 from statmoments.tests.test_stattest import wttest
-from statmoments._statmoments_impl import meanfree
+from statmoments.common import meanfree
 
 
 eng1d_list = [
