@@ -854,7 +854,7 @@ class _BivarNpassBase(_AccBase):
     self.cls    = np.vstack((self.cls, cl_copy))
 
   def counts(self, i):
-    c1 = sum(self.cls[:, i])
+    c1 = np.sum(self.cls[:, i], dtype=np.uint32)
     return self.total_count - c1, c1
 
   def _moments(self, moments, normalize):
