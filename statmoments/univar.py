@@ -2,8 +2,9 @@
 
 from os import path as os_path
 
+
+from statmoments.common import save_npy
 from statmoments._statmoments_impl import Univar
-from statmoments._statmoments_impl import save_npy
 from statmoments._statmoments_impl import _CliCommon
 
 from statmoments.stattests import ttests

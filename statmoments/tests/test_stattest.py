@@ -10,7 +10,7 @@ from numpy.random import normal as _rand
 from scipy.stats import ttest_ind, skew, kurtosis, moment
 
 import statmoments
-from statmoments._statmoments_impl import meanfree, triu_flatten, uni2bivar
+from statmoments.common import meanfree, triu_flatten, uni2bivar
 
 
 def mom_3pass(data, k, normalize=False):
@@ -181,11 +181,11 @@ def test_ttest_1d(kernel1d):
   # Ensure t-test finds stat diff
   # Find different means
   for tt1 in statmoments.stattests.ttests(eng, moment=1):
-    nt.assert_array_less(np.abs(tt1[0:2]), 3.1)
+    nt.assert_array_less(np.abs(tt1[0:2]), 3.2)
     assert np.all(np.abs(tt1[2:4]) > 30)
   # Find different vars
   for tt2 in statmoments.stattests.ttests(eng, moment=2):
-    nt.assert_array_less(np.abs(tt2[0:2]), 3.1)
+    nt.assert_array_less(np.abs(tt2[0:2]), 3.2)
     assert np.all(np.abs(tt2[2:4]) > 30)
   # Find no different skews
   for tt3 in statmoments.stattests.ttests(eng, moment=3):

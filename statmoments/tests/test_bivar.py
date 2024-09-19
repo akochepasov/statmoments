@@ -8,7 +8,7 @@ import numpy.testing as nt
 from scipy.stats import skew, kurtosis, moment
 
 import statmoments
-from statmoments._statmoments_impl import meanfree, triu_flatten, uni2bivar
+from statmoments.common import meanfree, triu_flatten, uni2bivar
 
 # np.random.seed(1)
 

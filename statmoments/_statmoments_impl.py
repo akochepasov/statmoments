@@ -1,6 +1,4 @@
-
 import os
-import shutil
 import logging
 import argparse
 from itertools import islice
@@ -13,45 +11,19 @@ import numpy as np
 
 from ._version import __version__ as _pkg_version
 
+# common
+from .common import str2bytes
+
+# bivar
 from ._native_shim import bivar_cntr, bivar_sum
 from ._native_shim import bivar_sum_mix, bivar_sum_detrend
 from ._native_shim import bivar_2pass, bivar_txtbk, bivar_vtk
 
+# univar
 from ._native_shim import univar_sum, univar_sum_detrend
 
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
-
-
-# ============================= UTILS ============================= #
-def str2bits(hexdata):
-  if not hexdata.startswith('0x'):
-    return hexdata  # binary data
-
-  # Convert hexadecimal
-  return bin(int(hexdata, 16))[2:].zfill((len(hexdata) - 2) * 4)
-
-
-def str2bytes(strline):
-  return bytearray(strline, 'ascii')
-
-
-def save_npy(filename, trace):
-  np.save(filename, trace, False, False)
-
-
-def remove_dir(dirname):
-  if not os.path.exists(dirname):
-      return
-
-  for fn in os.listdir(dirname):
-    fullname = os.path.join(dirname, fn)
-    if os.path.isfile(fullname):
-      os.remove(fullname)
-    elif os.path.isdir(fullname):
-      remove_dir(fullname)
-
-  shutil.rmtree(dirname, ignore_errors=True)
 
 
 def get_mm(mm):
@@ -73,22 +45,6 @@ def get_lmrm(mm):
   except TypeError:
     pass                              # mm is just a number
   return np.broadcast_to(mm, (2, 1)) if mm is not None else None
-
-
-def triu_flatten(sqmat):
-  return sqmat[np.triu_indices_from(sqmat)]
-
-
-def meanfree(traces):
-  return traces - np.mean(traces, axis=0)
-
-
-def uni2bivar(data, lm=1, rm=1, normalize=True):
-  sd = 1
-  if normalize and (lm + rm) >= 3:
-    sd = np.std(data, axis=0, ddof=0)
-  res = [triu_flatten(np.outer((tr / sd) ** lm, (tr / sd) ** rm)) for tr in meanfree(data)]
-  return res
 
 
 # ============================= ENGINE INTERFACE ============================= #
