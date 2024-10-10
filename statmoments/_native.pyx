@@ -3,6 +3,7 @@
 
 # Papers to research numerical stability:
 #  W. Kahan "Further remarks on reducing truncation errors", 1965
+#  B.P. Welford "Note on a method for calculating corrected sums of squares and products", 1962
 #  D.H.D. West "Updating mean and Variance Estimates: An improved method", 1979
 
 import cython
@@ -10,12 +11,13 @@ import numpy as np
 import scipy.linalg.blas as scipy_blas
 from scipy.special import binom
 
+# VTK is for benchmarking only
 cython.declare(USE_VTK = cython.int)
 USE_VTK = 0
 cython.declare(USE_GPU = cython.int)
-USE_GPU = 0
+USE_GPU = 1
 
-def is_vtk_installed():
+def chk_vtk_installed(USE_VTK):
   if not USE_VTK:
     return False
 
@@ -27,9 +29,24 @@ def is_vtk_installed():
     print("VTK is not installed")
     return False
 
-#if USE_GPU:
-#    from cupy_backends.cuda.libs import cupy_cublas
-#    from cupy import cublas as cupy_cublas
+def chk_cupy_installed(USE_GPU):
+  if not USE_GPU:
+    return False
+
+  try:
+    import cupy as cp
+    print("CUPY is installed and used")
+    return True
+  except ModuleNotFoundError:
+    print("Unable to use GPU: cupy is not installed")
+    return False
+
+USE_VTK = chk_vtk_installed(USE_VTK)
+USE_GPU = chk_cupy_installed(USE_GPU)
+
+if USE_GPU:
+  import cupy as cp
+  from cupy import cublas as cupy_cublas
 
 
 ################################ BLAS INTEROP ################################
@@ -153,37 +170,71 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
 @cython.cfunc
 @cython.inline
 @cython.returns(cython.void)
-@cython.locals(a='double[:,::1]', b='double[:,::1]', c='double[:,::1]',
+@cython.locals(A='double[:,::1]', B='double[:,::1]', C='double[:,::1]', 
                transa=cython.char, transb=cython.char,
                alpha=cython.double, beta=cython.double)
-def dgemm(a, b, c, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
+def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
   """ C = alpha * transa(A) * transb(B) + beta * C """
   cython.declare(n=cython.int, m=cython.int, k=cython.int, lda=cython.int, ldb=cython.int, ldc=cython.int)
-  n = cython.cast(cython.int, c.shape[0])
-  m = cython.cast(cython.int, c.shape[1])
-  k = cython.cast(cython.int, a.shape[0] if transa == b'N' else a.shape[1])
-  lda = cython.cast(cython.int, a.shape[1])
-  ldb = cython.cast(cython.int, b.shape[1])
-  ldc = cython.cast(cython.int, c.shape[1])
-  # assert (b.shape[0] if transb == b'N' else b.shape[1]) == n
-  # assert (a.shape[1] if transa == b'N' else a.shape[0]) == m
-  # assert (b.shape[1] if transb == b'N' else b.shape[0]) == k
+  n = cython.cast(cython.int, C.shape[0])
+  m = cython.cast(cython.int, C.shape[1])
+  k = cython.cast(cython.int, A.shape[0] if transa == b'N' else A.shape[1])
+  lda = cython.cast(cython.int, A.shape[1])
+  ldb = cython.cast(cython.int, B.shape[1])
+  ldc = cython.cast(cython.int, C.shape[1])
+  # assert (B.shape[0] if transb == b'N' else B.shape[1]) == n
+  # assert (A.shape[1] if transa == b'N' else A.shape[0]) == m
+  # assert (B.shape[1] if transb == b'N' else B.shape[0]) == k
 
-  if cython.compiled:
-    cython_blas.dgemm(cython.address(transa), cython.address(transb),
+  # if USE_GPU == 0:
+  if True:
+    if cython.compiled:
+      cython_blas.dgemm(cython.address(transa), cython.address(transb),
                       cython.address(m), cython.address(n), cython.address(k),
-                      cython.address(alpha), cython.address(a[0, 0]), cython.address(lda),
-                      cython.address(b[0, 0]), cython.address(ldb),
-                      cython.address(beta), cython.address(c[0, 0]), cython.address(ldc))
+                      cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
+                      cython.address(B[0, 0]), cython.address(ldb),
+                      cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
+    else:
+      scipy_blas.dgemm(alpha, A.T, B.T, beta, C.T, 1 if transa != b'N' else 0, 1 if transb != b'N' else 0, 1)
   else:
-    scipy_blas.dgemm(alpha, a.T, b.T, beta, c.T, 1 if transa != b'N' else 0, 1 if transb != b'N' else 0, 1)
+    if cython.compiled:
+      hndl = cupy_device.get_cublas_handle()
+      orig_mode = cython_cublas.getPointerMode(hndl)
+      # host mode throws "fatal exception: access violation" in dgemm
+      cython_cublas.setPointerMode(hndl, cython_cublas.CUBLAS_POINTER_MODE_DEVICE)
+
+      dA = cp.asarray(A)
+      dB = cp.asarray(B)
+      dC = cp.asarray(C)
+      devPtrA = cython.cast(size_t, dA.data.ptr)
+      devPtrB = cython.cast(size_t, dB.data.ptr)
+      devPtrC = cython.cast(size_t, dC.data.ptr)
+
+      a = cp.array(alpha, dtype=dA.dtype)
+      b = cp.array(beta,  dtype=dA.dtype)
+
+      # cython_cublas.dgemm(...)
+
+      # Copy out and restore mode
+      np.asarray(C)[:] = cp.asnumpy(dC)
+      cython_cublas.setPointerMode(hndl, orig_mode)
+    else:
+      dA = cp.asarray(A)
+      dB = cp.asarray(B)
+      dC = cp.asarray(C)
+      # cupy_cublas.gemm(...)
+      np.asarray(C)[:] = cp.asnumpy(dC)
 
 ################################ LOCAL HELPERS ################################
 @cython.cfunc
 @cython.locals(i=cython.Py_ssize_t, tr_len=cython.Py_ssize_t)
 def _block_index(i, tr_len):
   j = slice(i, tr_len)
-  k = slice(tr_len * i - (i - 1) * i // 2, tr_len * (i + 1) - (i + 1) * i // 2)
+
+  cython.declare(kfrom=cython.Py_ssize_t, kto=cython.Py_ssize_t)
+  kfrom = tr_len *       i - (i - 1) * i // 2
+  kto   = tr_len * (i + 1) - (i + 1) * i // 2
+  k = slice(kfrom, kto)
   return j, k
 
 
@@ -993,10 +1044,9 @@ class bivar_txtbk(_BivarNpassBase):
 
 ##################################### VTK #####################################
 # Used for benchmarking only
-if is_vtk_installed():
+if chk_vtk_installed(USE_VTK):
   import vtk
   from vtk.util.numpy_support import numpy_to_vtk as np2vtk, vtk_to_numpy as vtk2np
-
 
 class bivar_vtk(object):
   """A class, using vtk multivariate kernel. Covariance ONLY!!!"""
@@ -1208,7 +1258,7 @@ class univar_sum(_AccBase):
     tr_lyt[:, 0] = 1
     tr_lyt_view = tr_lyt[:, 1:].reshape(batch_cnt, moment, tr_len)
 
-    # Step 1: Create trace layout matrix up to moment degree
+    # Step 1: Create layout matrix up to moment degree
     tr_lyt_view[:, 0, :] = traces
     for j in range(1, moment):
       np.multiply(tr_lyt_view[:, 0, :], tr_lyt_view[:, j - 1, :], tr_lyt_view[:, j, :])
