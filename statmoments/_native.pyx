@@ -150,6 +150,7 @@ def ssyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
 def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   """ C = alpha * trans(A * A^T) + beta * C """
   cython.declare(n=cython.int, k=cython.int, lda=cython.int, ldc=cython.int)
+  cython.declare(uplo_ = cython.int, trans_ = cython.int)
   n = cython.cast(cython.int, C.shape[0])
   k = cython.cast(cython.int, A.shape[0] if trans == b'N' else A.shape[1])
   lda = cython.cast(cython.int, A.shape[1])
@@ -158,28 +159,60 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   # assert C.shape[1] == n
 
   if not cython.compiled:
+    # A and C have to be transposed to comply with F-order
     if USE_GPU == 0:
-      print("MKL DSYRK")
-      uplo_  = 0 if uplo  != b'U' else 1
+      # print("MKL DSYRK")
+      uplo_  = 0 if  uplo != b'U' else 1
       trans_ = 1 if trans != b'N' else 0
       scipy_blas.dsyrk(alpha, A.T, beta, C.T, trans_, uplo_, 1)
     else:
-      print("CUDA DSYRK")
+      # print("CUDA DSYRK")
+      dA = cp.asarray(A.T)
+      dC = cp.asarray(C.T)
+      uplo_  = 0 if  uplo != b'U' else 1
+      trans_ = 1 if trans != b'N' else 0
+      cupy_cublas.syrk(trans_, dA, dC, alpha, beta, uplo_)
+      np.asarray(C)[:] = cp.asnumpy(dC.T)
+  else:
+    if USE_GPU == 0:
+      # print("MKL NATIVE DSYRK")
+      uplo  = b'U' if  uplo != b'U' else b'L'
+      trans = b'T' if trans != b'N' else b'N'
+      cython_blas.dsyrk(cython.address(uplo),  cython.address(trans),
+                        cython.address(n),     cython.address(k),
+                        cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
+                        cython.address(beta),  cython.address(C[0, 0]), cython.address(ldc))
+    else:
+      # print("CUDA NATIVE DSYRK")
+      # NATIVE CUDA calls are not trasposed and can be improved
+      cython.declare(hndl = size_t, orig_mode = cython.int)
+      cython.declare(devPrtA = size_t, devPrtC = size_t)
+
+      hndl = cupy_device.get_cublas_handle()
+      orig_mode = cython_cublas.getPointerMode(hndl)
+      # host mode throws "fatal exception: access violation" in dsyrk
+      cython_cublas.setPointerMode(hndl, cython_cublas.CUBLAS_POINTER_MODE_DEVICE)
+
+      uplo_  = 1 if  uplo != b'U' else 0
+      trans_ = 1 if trans != b'N' else 0
+
       dA = cp.asarray(A)
       dC = cp.asarray(C)
-      # A and C have to be transposed to comply with F-order
-      uplo_  = 1 if uplo != b'U' else 0
-      trans_ = 0 if trans != b'N' else 1
-      cupy_cublas.syrk(trans_, dA, dC, alpha, beta, uplo_)
+      a = cp.array(alpha, dtype=dA.dtype)
+      b = cp.array(beta,  dtype=dA.dtype)
+
+      cython_cublas.dsyrk(hndl, uplo_, trans_, n, k,
+        a.data.ptr, cython.cast(size_t, dA.data.ptr), lda,
+        b.data.ptr, cython.cast(size_t, dC.data.ptr), ldc)
+
+      # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC)
-  else:
-    # A and C have to be transposed to comply with F-order
-    scipy_blas.dsyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 0 if uplo != b'U' else 1, 1)
+      cython_cublas.setPointerMode(hndl, orig_mode)
 
 @cython.cfunc
 @cython.inline
 @cython.returns(cython.void)
-@cython.locals(A='double[:,::1]', B='double[:,::1]', C='double[:,::1]', 
+@cython.locals(A='double[:,::1]', B='double[:,::1]', C='double[:,::1]',
                transa=cython.char, transb=cython.char,
                alpha=cython.double, beta=cython.double)
 def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
