@@ -6,4 +6,4 @@ import pytest
 
 # Entrance point
 if __name__ == '__main__':
-  sys.exit(pytest.main(["-v", os.path.dirname(__file__)]))
+  sys.exit(pytest.main(["-v", "-s", os.path.dirname(__file__)]))
