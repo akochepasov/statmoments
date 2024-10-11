@@ -157,12 +157,21 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   # assert (A.shape[1] if trans == b'N' else A.shape[0]) == n
   # assert C.shape[1] == n
 
-  if cython.compiled:
-    #    if not USE_GPU:
-    uplo = b'U' if uplo != b'U' else b'L'
-    cython_blas.dsyrk(cython.address(uplo), cython.address(trans), cython.address(n), cython.address(k),
-                      cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
-                      cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
+  if not cython.compiled:
+    if USE_GPU == 0:
+      print("MKL DSYRK")
+      uplo_  = 0 if uplo  != b'U' else 1
+      trans_ = 1 if trans != b'N' else 0
+      scipy_blas.dsyrk(alpha, A.T, beta, C.T, trans_, uplo_, 1)
+    else:
+      print("CUDA DSYRK")
+      dA = cp.asarray(A)
+      dC = cp.asarray(C)
+      # A and C have to be transposed to comply with F-order
+      uplo_  = 1 if uplo != b'U' else 0
+      trans_ = 0 if trans != b'N' else 1
+      cupy_cublas.syrk(trans_, dA, dC, alpha, beta, uplo_)
+      np.asarray(C)[:] = cp.asnumpy(dC)
   else:
     # A and C have to be transposed to comply with F-order
     scipy_blas.dsyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 0 if uplo != b'U' else 1, 1)
