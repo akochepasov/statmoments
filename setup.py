@@ -66,11 +66,11 @@ def get_version():
 
 def store_git_hash():
   try:
-    ghash = subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip().decode("utf-8")
-  except FileNotFoundError:
+    commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip().decode("utf-8")
+  except subprocess.CalledProcessError:
     return False
   with open("statmoments/GIT_VERSION.txt", "w") as h:
-    h.write(ghash + "\n")
+    h.write(commit_hash + "\n")
   return True
 
 
