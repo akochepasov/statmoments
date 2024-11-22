@@ -3,6 +3,7 @@
 import os
 import sys
 import setuptools
+import subprocess
 
 from Cython.Build import cythonize
 
@@ -63,8 +64,20 @@ def get_version():
 #  setuptools.setup(
 #    cmdclass = {'build_ext' : build_ext_cupy},
 
+def store_git_hash():
+  try:
+    ghash = subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip().decode("utf-8")
+  except FileNotFoundError:
+    return False
+  with open("statmoments/GIT_VERSION.txt", "w") as h:
+    h.write(ghash + "\n")
+  return True
+
 
 def main():
+  if store_git_hash():
+    kwargs["package_data"] = {"statmoments" : ["GIT_VERSION.txt"]}
+
   ext = '.pyx' if USE_CYTHON else '.c'
   extensions = [make_ext("statmoments._native", 'statmoments/_native' + ext)]
   extensions = cythonize('statmoments/_native' + ext) if USE_CYTHON else extensions
