@@ -27,6 +27,7 @@ pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
+GIT_VERSION.txt
 *.egg
 MANIFEST
 
@@ -73,9 +74,6 @@ ipython_config.py
 #   intended to run in multiple environments; otherwise, check them in:
 .python-version
 
-# SageMath parsed files
-*.sage.py
-
 # Environments
 .env
 .venv
@@ -92,13 +90,3 @@ venv.bak/
 *.suo
 *.user
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
