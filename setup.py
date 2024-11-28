@@ -21,12 +21,11 @@ USE_CUPY_CUDA = 0
 _cythonize_env = { 'USE_CUPY_CUDA' : 0 }
 
 try:
-  import cupy as cp
   from cupy import cublas as cupy_cublas
   USE_CUPY_CUDA = 1
   # Compilation settings for cupy and _native.pyx
   _cythonize_env = {
-    'CUPY_CUDA_VERSION'    : 115,
+    'CUPY_CUDA_VERSION'    : 124,
     'CUPY_HIP_VERSION'     : 0,
     'CUPY_USE_CUDA_PYTHON' : 0,
     'USE_CUPY_CUDA'        : USE_CUPY_CUDA
