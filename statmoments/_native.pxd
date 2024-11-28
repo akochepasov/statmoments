@@ -2,7 +2,6 @@
 
 cimport scipy.linalg.cython_blas as cython_blas
 from libc.math cimport sqrt
-from libc.stdint cimport intptr_t, uintmax_t
 
 IF USE_CUPY_CUDA:
   from cupy_backends.cuda.libs cimport cublas as cython_cublas

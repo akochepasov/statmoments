@@ -387,7 +387,7 @@ def _rmoms2cmoms2D(raw, ave, n, lm, rm, i, j):
 
   inv_n = 1.0 / n
   ave_i = ave[i]  # i is a scalar
-  ave_j = ave[j]  # j is a slice such that indices (j, j) add diagonal!
+  ave_j = ave[j]  # j is a slice such that indices (j, j) add the diagonal!
 
   # Expressions for conversions raw moments to central moments in the
   # Horner representation auto-generated with sympy, group order (mu_j, mu_i)
@@ -431,16 +431,16 @@ def _rmoms2cmoms2D(raw, ave, n, lm, rm, i, j):
     M_44 = raw[3, :, 3, :]   # 3
     m = ave_j * (-4 * M_34[j, i] \
                 + ave_i * (16 * M_33[i, j] \
-                          + ave_i * (-24 * M_23[i, j] + ave_i * (-4 * M_12[j, j].diagonal() * ave_i + 16 * M_13[i, j]))) \
+                          + ave_i * (-24 * M_23[i, j] + ave_i * (-4 * ave_i * M_12[j, j].diagonal() + 16 * M_13[i, j]))) \
                 + ave_j * (6 * M_24[j, i] \
                           + ave_i * (-24 * M_23[j, i] \
                                     + ave_i * (36 * M_22[i, j] \
-                                              + ave_i * ((6 * ave_i) * M_11[j, j].diagonal() - 24 * M_12[i, j]))) \
+                                              + ave_i * (6 * ave_i * M_11[j, j].diagonal() - 24 * M_12[i, j]))) \
                           + ave_j * (-4 * M_14[j, i] \
                                     + ave_i * (16 * M_13[j, i] + ave_i * (16 * ave_i * M_11[i, j] - 24 * M_12[j, i])) \
                                     + ave_j * (M_13[i, i] \
                                               + ave_i * (-4 * M_12[i, i] + ave_i * (6 * M_11[i, i] - 7* n * ave_i ** 2)))))) \
-        + ave_i * (-4 * M_34[i, j] + ave_i * (6 * M_24[i, j] + ave_i * (M_13[j, j].diagonal() * ave_i - 4 * M_14[i, j]))) \
+        + ave_i * (-4 * M_34[i, j] + ave_i * (6 * M_24[i, j] + ave_i * (ave_i * M_13[j, j].diagonal() - 4 * M_14[i, j]))) \
         + M_44[i, j]
   else:
     m = _rmoms2cmoms2D_general(raw, ave, n, lm, rm, i, j)
