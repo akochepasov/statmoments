@@ -15,7 +15,7 @@ from scipy.special import binom
 cython.declare(USE_VTK = cython.int)
 USE_VTK = 0
 cython.declare(USE_GPU = cython.int)
-USE_GPU = 1
+USE_GPU = 0
 
 def chk_vtk_installed(USE_VTK):
   if not USE_VTK:
@@ -158,32 +158,33 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   # assert (A.shape[1] if trans == b'N' else A.shape[0]) == n
   # assert C.shape[1] == n
 
-  if not cython.compiled:
-    # A and C have to be transposed to comply with F-order
-    if USE_GPU == 0:
-      # print("MKL DSYRK")
-      uplo_  = 0 if  uplo != b'U' else 1
-      trans_ = 1 if trans != b'N' else 0
+  # A and C have to be transposed to comply with F-order
+
+  if USE_GPU == 0:
+    if not cython.compiled:
+      # print("MKL DSYRK") # Verified on nov 30
+      uplo_  = 0 if  uplo == b'L' else 1  # L if L else U
+      trans_ = 0 if trans == b'N' else 1  # N if N else T
       scipy_blas.dsyrk(alpha, A.T, beta, C.T, trans_, uplo_, 1)
     else:
-      # print("CUDA DSYRK")
-      dA = cp.asarray(A.T)
-      dC = cp.asarray(C.T)
-      uplo_  = 0 if  uplo != b'U' else 1
-      trans_ = 1 if trans != b'N' else 0
-      cupy_cublas.syrk(trans_, dA, dC, alpha, beta, uplo_)
-      np.asarray(C)[:] = cp.asnumpy(dC.T)
-  else:
-    if USE_GPU == 0:
-      # print("MKL NATIVE DSYRK")
-      uplo  = b'U' if  uplo != b'U' else b'L'
-      trans = b'T' if trans != b'N' else b'N'
+      # print("MKL NATIVE DSYRK") # Verified on nov 30
+      uplo  = b'U' if  uplo == b'L' else b'L'
+      trans = b'N' if trans == b'N' else b'T'
       cython_blas.dsyrk(cython.address(uplo),  cython.address(trans),
                         cython.address(n),     cython.address(k),
                         cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
                         cython.address(beta),  cython.address(C[0, 0]), cython.address(ldc))
+  else:
+    if not cython.compiled:
+      print("CUDA DSYRK")
+      dA = cp.asarray(A.T)
+      dC = cp.asarray(C.T)
+      uplo_  = 0 if  uplo == b'L' else 1  # L if L else U
+      trans_ = 0 if trans == b'N' else 1  # N if N else T
+      cupy_cublas.syrk(trans_, dA, dC, alpha, beta, uplo_)
+      np.asarray(C)[:] = cp.asnumpy(dC.T)
     else:
-      # print("CUDA NATIVE DSYRK")
+      print("CUDA NATIVE DSYRK")
       # NATIVE CUDA calls are not trasposed and can be improved
       cython.declare(hndl = size_t, orig_mode = cython.int)
       cython.declare(devPrtA = size_t, devPrtC = size_t)
