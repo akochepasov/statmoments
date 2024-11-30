@@ -47,6 +47,8 @@ USE_GPU = chk_cupy_installed(USE_GPU)
 if USE_GPU:
   import cupy as cp
   from cupy import cublas as cupy_cublas
+  import nvmath.bindings.cublas as nvmath_cublas
+  # from nvmath.bindings import cublas as nv_cublas
 
 
 ################################ BLAS INTEROP ################################
@@ -127,6 +129,7 @@ def dger(A, x, y, alpha=1.0, incx = 1, incy = 1):
 def ssyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   """ C = alpha * trans(A * A^T) + beta * C """
   cython.declare(n=cython.int, k=cython.int, lda=cython.int, ldc=cython.int)
+  cython.declare(uplo_ = cython.int, trans_ = cython.int)
   n = cython.cast(cython.int, C.shape[0])
   k = cython.cast(cython.int, A.shape[0] if trans == b'N' else A.shape[1])
   lda = cython.cast(cython.int, A.shape[1])
@@ -134,12 +137,15 @@ def ssyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   # assert (A.shape[1] if trans == b'N' else A.shape[0]) == n
   # assert C.shape[1] == n
 
-  # !!! uplo 'L' and 'U' mixed up !!!
   if cython.compiled:
+    uplo_  = 0 if  uplo == b'L' else 1  # L if L else U
+    trans_ = 0 if trans == b'N' else 1  # N if N else T
     cython_blas.ssyrk(cython.address(uplo), cython.address(trans), cython.address(n), cython.address(k),
                       cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
                       cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
   else:
+    uplo  = b'U' if  uplo == b'L' else b'L'  # U if L else L
+    trans = b'N' if trans == b'N' else b'T'  # N if N else T
     scipy_blas.ssyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 1 if uplo != b'U' else 0, 1)
 
 @cython.cfunc
@@ -151,6 +157,7 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   """ C = alpha * trans(A * A^T) + beta * C """
   cython.declare(n=cython.int, k=cython.int, lda=cython.int, ldc=cython.int)
   cython.declare(uplo_ = cython.int, trans_ = cython.int)
+  cython.declare(hndl = cython.size_t, orig_mode = cython.int)
   n = cython.cast(cython.int, C.shape[0])
   k = cython.cast(cython.int, A.shape[0] if trans == b'N' else A.shape[1])
   lda = cython.cast(cython.int, A.shape[1])
@@ -179,23 +186,33 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
       # print("CUDA DSYRK")  # Verified on nov 30
       dA = cp.asarray(A.T)
       dC = cp.asarray(C.T)
-      uplo_  = 0 if  uplo == b'L' else 1  # L if L else U
-      trans_ = 0 if trans == b'N' else 1  # N if N else T
-      cupy_cublas.syrk(trans_, dA, dC, alpha, beta, uplo_)
-      np.asarray(C)[:] = cp.asnumpy(dC.T)
-    else:
-      # print("CUDA NATIVE DSYRK")  # Verified on nov 30
-      # NATIVE CUDA calls are not trasposed and can be improved
-      cython.declare(hndl = size_t, orig_mode = cython.int)
-      cython.declare(devPrtA = size_t, devPrtC = size_t)
-
-      hndl = cupy_device.get_cublas_handle()
-      orig_mode = cython_cublas.getPointerMode(hndl)
-      # host mode throws "fatal exception: access violation" in dsyrk
-      cython_cublas.setPointerMode(hndl, cython_cublas.CUBLAS_POINTER_MODE_DEVICE)
+      a = cp.array(alpha, dtype=dA.dtype)
+      b = cp.array(beta,  dtype=dA.dtype)
 
       uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
       trans_ = 0 if trans == b'N' else 1  # N if N else T
+
+      hndl = nvmath_cublas.create()
+      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
+      nvmath_cublas.set_pointer_mode(hndl, 1)
+
+      nvmath_cublas.dsyrk(hndl, uplo_, trans_, n, k,
+                          a.data.ptr, dA.data.ptr, lda,
+                          b.data.ptr, dC.data.ptr, ldc)
+
+      # Copy out and restore mode
+      np.asarray(C)[:] = cp.asnumpy(dC.T)
+      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
+      nvmath_cublas.destroy(hndl)
+    else:
+      # print("CUDA NATIVE DSYRK")  # Verified on nov 30
+
+      uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
+      trans_ = 0 if trans == b'N' else 1  # N if N else T
+
+      hndl = cupy_device.get_cublas_handle()
+      orig_mode = cython_cublas.getPointerMode(hndl)
+      cython_cublas.setPointerMode(hndl, cython_cublas.CUBLAS_POINTER_MODE_DEVICE)
 
       dA = cp.asarray(A)
       dC = cp.asarray(C)
@@ -241,10 +258,10 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
       scipy_blas.dgemm(alpha, A.T, B.T, beta, C.T, 1 if transa != b'N' else 0, 1 if transb != b'N' else 0, 1)
   else:
     if cython.compiled:
-      hndl = cupy_device.get_cublas_handle()
-      orig_mode = cython_cublas.getPointerMode(hndl)
+      hndl = nvmath_cublas.create()
+      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
       # host mode throws "fatal exception: access violation" in dgemm
-      cython_cublas.setPointerMode(hndl, cython_cublas.CUBLAS_POINTER_MODE_DEVICE)
+      nvmath_cublas.set_pointer_mode(hndl, 1)
 
       dA = cp.asarray(A)
       dB = cp.asarray(B)
@@ -260,12 +277,13 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
 
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC)
-      cython_cublas.setPointerMode(hndl, orig_mode)
+      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
+      nvmath_cublas.destroy(hndl)
     else:
       dA = cp.asarray(A)
       dB = cp.asarray(B)
       dC = cp.asarray(C)
-      # cupy_cublas.gemm(...)
+      # nvmath_cublas.gemm(...)
       np.asarray(C)[:] = cp.asnumpy(dC)
 
 ################################ LOCAL HELPERS ################################
