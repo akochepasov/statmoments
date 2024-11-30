@@ -7,7 +7,7 @@ import scipy
 import statmoments
 import statmoments.benchmark.benchlib as bl
 
-from statmoments._native import is_vtk_installed
+from statmoments._native import chk_vtk_installed
 
 # Setup
 debug_run = True
@@ -18,8 +18,10 @@ np.seterr(all='ignore')
 def bivar_benchmark():
   params = bl.make_trace_ushort, bl.make_hypotheses, statmoments.Bivar
 
-  kernels = [statmoments.bivar_sum, statmoments.bivar_2pass, statmoments.bivar_txtbk]
-  if is_vtk_installed():
+  kernels = []
+  kernels.extend([statmoments.bivar_sum, statmoments.bivar_sum_detrend])
+  kernels.extend([statmoments.bivar_2pass, statmoments.bivar_txtbk])
+  if chk_vtk_installed(False):
     kernels.append(statmoments.bivar_vtk)
 
   engines = {(k.__name__, m): bl.EngineFactory(*params, kernel=k, moment=m)
