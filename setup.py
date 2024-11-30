@@ -21,7 +21,7 @@ USE_CUPY_CUDA = 0
 _cythonize_env = { 'USE_CUPY_CUDA' : 0 }
 
 try:
-  from cupy import cublas as cupy_cublas
+  import nvmath.bindings.cublas as nvmath_cublas
   USE_CUPY_CUDA = 1
   # Compilation settings for cupy and _native.pyx
   _cythonize_env = {
