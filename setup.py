@@ -18,17 +18,17 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 USE_CYTHON = os.path.isfile(os.path.join(basedir, "statmoments/_native.pyx"))
 
 USE_CUPY_CUDA = 0
-_cythonize_env = { 'USE_CUPY_CUDA' : 0 }
+_cythonize_env = {'USE_CUPY_CUDA': 0}
 
 try:
-  import nvmath.bindings.cublas as nvmath_cublas
+  import nvmath.bindings.cublas as nvmath_cublas  # noqa: F401
   USE_CUPY_CUDA = 1
   # Compilation settings for cupy and _native.pyx
   _cythonize_env = {
-    'CUPY_CUDA_VERSION'    : 124,
-    'CUPY_HIP_VERSION'     : 0,
-    'CUPY_USE_CUDA_PYTHON' : 0,
-    'USE_CUPY_CUDA'        : USE_CUPY_CUDA
+      'CUPY_CUDA_VERSION': 124,
+      'CUPY_HIP_VERSION': 0,
+      'CUPY_USE_CUDA_PYTHON': 0,
+      'USE_CUPY_CUDA': USE_CUPY_CUDA
   }
   print("cupy found and used")
 except ModuleNotFoundError:
@@ -52,14 +52,13 @@ def make_ext(modname, filename):
     pass
 
  # Always rebuild. TODO: delete force later
-  ext = cython_extension.Extension(modname,
-                             [filename],
-                             extra_compile_args=compile_args,
-                             extra_link_args=link_args,
-                             cython_compile_time_env = _cythonize_env,
-                             # cython_gdb = True,
-                             # force = True # always rebuild
-                             )
+  ext = cython_extension.Extension(modname, [filename],
+                                   extra_compile_args=compile_args,
+                                   extra_link_args=link_args,
+                                   cython_compile_time_env=_cythonize_env,
+                                   # cython_gdb = True,
+                                   # force = True # always rebuild
+                                   )
   return ext
 
 
@@ -70,14 +69,6 @@ def get_version():
     exec(h.read(), None, _version_dict)
   return _version_dict['__version__']
 
-def store_git_hash():
-  try:
-    ghash = subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip().decode("utf-8")
-  except FileNotFoundError:
-    return False
-  with open("statmoments/GIT_VERSION.txt", "w") as h:
-    h.write(ghash + "\n")
-  return True
 
 
 def store_git_hash():
