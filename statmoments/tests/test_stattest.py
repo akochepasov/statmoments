@@ -166,7 +166,7 @@ def test_init2(kernel2d):
 def test_ttest_1d(kernel1d):
   max_moment = 4
   tr_len, cl_len = 5, 2
-  n0, n1 = 987, 1234
+  n0, n1 = 1987, 2234
   traces0 = np.random.randint(0, 256, (n0, tr_len))
   # Insert different distribution into some points of one batch
   traces0[:, 2:4] = np.random.normal(30, 7, (n0, 2)).astype(traces0.dtype)
