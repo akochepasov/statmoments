@@ -46,7 +46,6 @@ USE_GPU = chk_cupy_installed(USE_GPU)
 
 if USE_GPU:
   import cupy as cp
-  from cupy import cublas as cupy_cublas
   import nvmath.bindings.cublas as nvmath_cublas
   # from nvmath.bindings import cublas as nv_cublas
 
@@ -189,13 +188,12 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
       a = cp.array(alpha, dtype=dA.dtype)
       b = cp.array(beta,  dtype=dA.dtype)
 
-      uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
-      trans_ = 0 if trans == b'N' else 1  # N if N else T
-
       hndl = nvmath_cublas.create()
       orig_mode = nvmath_cublas.get_pointer_mode(hndl)
       nvmath_cublas.set_pointer_mode(hndl, 1)
 
+      uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
+      trans_ = 0 if trans == b'N' else 1  # N if N else T
       nvmath_cublas.dsyrk(hndl, uplo_, trans_, n, k,
                           a.data.ptr, dA.data.ptr, lda,
                           b.data.ptr, dC.data.ptr, ldc)
@@ -206,26 +204,25 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
       nvmath_cublas.destroy(hndl)
     else:
       # print("CUDA NATIVE DSYRK")  # Verified on nov 30
-
-      uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
-      trans_ = 0 if trans == b'N' else 1  # N if N else T
-
-      hndl = cupy_device.get_cublas_handle()
-      orig_mode = cython_cublas.getPointerMode(hndl)
-      cython_cublas.setPointerMode(hndl, cython_cublas.CUBLAS_POINTER_MODE_DEVICE)
-
       dA = cp.asarray(A)
       dC = cp.asarray(C)
       a = cp.array(alpha, dtype=dA.dtype)
       b = cp.array(beta,  dtype=dA.dtype)
 
-      cython_cublas.dsyrk(hndl, uplo_, trans_, n, k,
-        a.data.ptr, cython.cast(size_t, dA.data.ptr), lda,
-        b.data.ptr, cython.cast(size_t, dC.data.ptr), ldc)
+      hndl = nvmath_cublas.create()
+      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
+      nvmath_cublas.set_pointer_mode(hndl, 1)
+
+      uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
+      trans_ = 0 if trans == b'N' else 1  # N if N else T
+      nvmath_cublas.dsyrk(hndl, uplo_, trans_, n, k,
+                          a.data.ptr, dA.data.ptr, lda,
+                          b.data.ptr, dC.data.ptr, ldc)
 
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC)
-      cython_cublas.setPointerMode(hndl, orig_mode)
+      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
+      nvmath_cublas.destroy(hndl)
 
 @cython.cfunc
 @cython.inline
@@ -273,7 +270,7 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
       a = cp.array(alpha, dtype=dA.dtype)
       b = cp.array(beta,  dtype=dA.dtype)
 
-      # cython_cublas.dgemm(...)
+      # nvmath_cublas.dgemm(...)
 
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC)
