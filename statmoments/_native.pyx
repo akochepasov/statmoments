@@ -1,6 +1,11 @@
 #!python
 #cython: boundscheck=False, cdivision=True, initializedcheck=False, nonecheck=False, overflowcheck=False, profile=False, wraparound=False
 
+# Papers to research numerical stability:
+#  W. Kahan "Further remarks on reducing truncation errors", 1965
+#  D.H.D. West "Updating mean and Variance Estimates: An improved method", 1979
+
+from abc import ABC, abstractmethod
 import cython
 import numpy as np
 import scipy.linalg.blas as scipy_blas
@@ -294,7 +299,7 @@ def _block_index(i, tr_len):
 
 
 ############################### COMMON CLASS ##################################
-class _AccBase(object):
+class _AccBase(ABC):
   def __init__(self, tr_len, cl_len, moment=2, normalize=True, **kwargs):
     self.total_count = 0
     self.moment = moment
@@ -304,17 +309,29 @@ class _AccBase(object):
     self.acc_min_count = kwargs.pop('acc_min_count', 10)
 
   @staticmethod
+  @abstractmethod
   def estimate_mem_size(tr_len, cl_len=1, moment=2):
-    raise NotImplementedError("Must be implemented in an inherited class")
+    pass
 
+  @abstractmethod
   def memory_size(self):
-    raise NotImplementedError("Must be implemented in an inherited class")
+    pass
 
+  @abstractmethod
   def update(self, traces, classifiers):
-    raise NotImplementedError("Must be implemented in an inherited class")
+    pass
 
+  @abstractmethod
   def counts(self, i):
-    raise NotImplementedError("Must be implemented in an inherited class")
+    pass
+
+  @abstractmethod
+  def _moments(self, moments, normalize):
+    pass
+
+  @abstractmethod
+  def _comoments(self, moments, normalize):
+    pass
 
   def moments(self, moments=None, normalize=None):
     """Return a generator yielding a pair of univariate statistical moments for each classifier"""
@@ -1299,6 +1316,9 @@ class univar_sum(_AccBase):
               cmi[:] /= sd ** i
 
       yield self._retm[:, moments]
+
+  def _comoments(self, moments, normalize):
+    raise NotImplementedError("Univariate statistic are unable to provide bivariate ones")
 
   def update(self, traces, classifiers):
     moment, batch_cnt = self.moment, len(traces)
