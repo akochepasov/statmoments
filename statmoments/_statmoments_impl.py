@@ -71,7 +71,7 @@ class _BaseImpl(object):
 
   @property
   def moment(self):
-    """The maximum statistical moment."""
+    """The maximal available statistical moment."""
     return self._impl.moment
 
   @property
