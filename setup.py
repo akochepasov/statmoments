@@ -31,9 +31,9 @@ try:
       'CUPY_USE_CUDA_PYTHON': 0,
       'USE_CUPY_CUDA': USE_CUPY_CUDA
   }
-  print("cupy found and used")
+  print("nvmath found and used")
 except ModuleNotFoundError:
-  print("Unable to use GPU: cupy is not installed")
+  print("Unable to use GPU: nvmath is not installed")
 
 
 def make_ext(modname, filename):
