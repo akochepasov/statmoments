@@ -35,11 +35,11 @@ def chk_nvmath_installed(_USE_GPU):
 
   try:
     import cupy as cp
-    import nvmath
-    print("NVMATH is installed and used")
+    import nvmath.bindings.cublas as nvmath_cublas  # noqa: F401
+    print("nvmath is installed and used")
     return True
   except ModuleNotFoundError:
-    print("Unable to use GPU: cupy is not installed")
+    print("Unable to use GPU: nvmath is not installed")
     return False
 
 USE_VTK = chk_vtk_installed(USE_VTK)
