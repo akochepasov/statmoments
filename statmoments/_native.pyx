@@ -17,8 +17,8 @@ USE_VTK = 0
 cython.declare(USE_GPU = cython.int)
 USE_GPU = 1
 
-def chk_vtk_installed(USE_VTK):
-  if not USE_VTK:
+def chk_vtk_installed(_USE_VTK):
+  if not _USE_VTK:
     return False
 
   try:
@@ -29,20 +29,21 @@ def chk_vtk_installed(USE_VTK):
     print("VTK is not installed")
     return False
 
-def chk_cupy_installed(USE_GPU):
-  if not USE_GPU:
+def chk_nvmath_installed(_USE_GPU):
+  if not _USE_GPU:
     return False
 
   try:
     import cupy as cp
-    print("CUPY is installed and used")
+    import nvmath
+    print("NVMATH is installed and used")
     return True
   except ModuleNotFoundError:
     print("Unable to use GPU: cupy is not installed")
     return False
 
 USE_VTK = chk_vtk_installed(USE_VTK)
-USE_GPU = chk_cupy_installed(USE_GPU)
+USE_GPU = chk_nvmath_installed(USE_GPU)
 
 if USE_GPU:
   import cupy as cp
@@ -245,6 +246,7 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
 
   # if USE_GPU == 0:
   if True:
+    # DGEMM is not ready yet
     if cython.compiled:
       cython_blas.dgemm(cython.address(transa), cython.address(transb),
                       cython.address(m), cython.address(n), cython.address(k),
