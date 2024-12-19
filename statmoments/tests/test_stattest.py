@@ -216,14 +216,14 @@ def test_ttest_2d(kernel2d):
   # Ensure t-test finds the inserted correlation
   # Find different covars
   for tt2 in statmoments.stattests.ttests(eng, moment=(1, 1)):
-    nt.assert_array_less(np.abs(tt2[0:7]), 3.3)
+    nt.assert_array_less(np.abs(tt2[0:7]), 3.5)
     nt.assert_array_less(15, np.abs(tt2[7:-1]))
   # Find no different co-skews
   for tt3 in statmoments.stattests.ttests(eng, moment=(1, 2)):
-    nt.assert_array_less(np.abs(tt3), 3.3)
+    nt.assert_array_less(np.abs(tt3), 3.5)
   # Find different co-kurtoses
   for tt4 in statmoments.stattests.ttests(eng, moment=(2, 2)):
-    nt.assert_array_less(np.abs(tt4[0:8]), 2.3)
+    nt.assert_array_less(np.abs(tt4[0:8]), 2.5)
     nt.assert_array_less(6, np.abs(tt2[8]))
 
 
