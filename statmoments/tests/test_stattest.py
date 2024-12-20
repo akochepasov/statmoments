@@ -200,7 +200,7 @@ def test_ttest_1d(kernel1d):
 def test_ttest_2d(kernel2d):
   max_moment = 4
   tr_len, cl_len = 4, 2
-  n0, n1 = 1343, 1234
+  n0, n1 = 1143, 1034
   traces0 = np.random.randint(0, 256, (n0, tr_len))
   traces1 = np.random.randint(0, 256, (n1, tr_len))
   # Insert co-dependence to some point of one batch
