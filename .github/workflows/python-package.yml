@@ -45,35 +45,13 @@ jobs:
     - name: Install python dependencies
       run: |
         pip install -r requirements.txt
-        pip install flake8 pytest pytest-cov pytest-xdist coverage cython Cython setuptools wheel
-
+    - name: Test with pytest
+      run: |
+        pip install -e .
+        pytest --durations=0 .
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 --count --select=E9,F63,F7,F82 --show-source --statistics .
         # exit-zero treats all errors as warnings. Line is 120 chars wide
         flake8 --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics .
-
-    - name: Install and test with pytest
-      run: |
-        pip install -e .
-        pytest --durations=0 -n auto --dist loadfile --cov statmoments .
-        coverage report -m
-
-    - name: Generate and upload coverage to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        flags: unittests
-        fail_ci_if_error: true  # CI fails if Codecov upload fails
-
-    # - name: Prepare python packages
-    #   run: |
-    #       python setup.py sdist bdist_wheel
-
-    # - name: Store the distribution packages
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: python-package-distributions
-    #     path: dist/
-    #     retention-days: 7
