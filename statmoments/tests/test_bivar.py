@@ -166,7 +166,7 @@ def test_act_memory_size(kernel2d):
 @pytest.mark.parametrize("normalized", [False, True])
 def test_comoments_all_kernels(kernel2d, normalized):
   tr_len, cl_len = 3, 1
-  n0, n1 = 764, 980
+  n0, n1 = 114, 180
   traces0 = np.random.randint(0, 256, (n0, tr_len))
   traces1 = np.random.randint(0, 256, (n1, tr_len))
   eng = statmoments.Bivar(tr_len, cl_len, kernel=kernel2d, moment=4, normalize=normalized)

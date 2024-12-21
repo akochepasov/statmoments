@@ -16,7 +16,7 @@ jobs:
               runs-on: ubuntu-20.04
               python_platform: linux
             - name: macOS
-              runs-on: macos-12
+              runs-on: macOS-13
               python_platform: darwin
             - name: Windows
               runs-on: windows-2019
@@ -37,10 +37,10 @@ jobs:
     - name: Test with pytest
       run: |
         pip install -e .
-        pytest .
+        pytest --durations=0 .
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 --count --select=E9,F63,F7,F82 --show-source --statistics .
         # exit-zero treats all errors as warnings. Line is 120 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+        flake8 --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics .
