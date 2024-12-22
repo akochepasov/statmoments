@@ -1,22 +1,19 @@
 #!python
 #cython: boundscheck=False, cdivision=True, initializedcheck=False, nonecheck=False, overflowcheck=False, profile=False, wraparound=False
 
-# Papers to research numerical stability:
-#  W. Kahan "Further remarks on reducing truncation errors", 1965
-#  D.H.D. West "Updating mean and Variance Estimates: An improved method", 1979
-
 import cython
 import numpy as np
 import scipy.linalg.blas as scipy_blas
 from scipy.special import binom
 
+# VTK is for benchmarking only
 cython.declare(USE_VTK = cython.int)
 USE_VTK = 0
 cython.declare(USE_GPU = cython.int)
-USE_GPU = 0
+USE_GPU = 1
 
-def is_vtk_installed():
-  if not USE_VTK:
+def chk_vtk_installed(_USE_VTK):
+  if not _USE_VTK:
     return False
 
   try:
@@ -27,9 +24,26 @@ def is_vtk_installed():
     print("VTK is not installed")
     return False
 
-#if USE_GPU:
-#    from cupy_backends.cuda.libs import cupy_cublas
-#    from cupy import cublas as cupy_cublas
+def chk_nvmath_installed(_USE_GPU):
+  if not _USE_GPU:
+    return False
+
+  try:
+    import cupy as cp
+    import nvmath.bindings.cublas as nvmath_cublas  # noqa: F401
+    print("nvmath is installed and used")
+    return True
+  except ModuleNotFoundError:
+    print("Unable to use GPU: nvmath is not installed")
+    return False
+
+USE_VTK = chk_vtk_installed(USE_VTK)
+USE_GPU = chk_nvmath_installed(USE_GPU)
+
+if USE_GPU:
+  import cupy as cp
+  import nvmath.bindings.cublas as nvmath_cublas
+  # from nvmath.bindings import cublas as nv_cublas
 
 
 ################################ BLAS INTEROP ################################
@@ -110,6 +124,7 @@ def dger(A, x, y, alpha=1.0, incx = 1, incy = 1):
 def ssyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   """ C = alpha * trans(A * A^T) + beta * C """
   cython.declare(n=cython.int, k=cython.int, lda=cython.int, ldc=cython.int)
+  cython.declare(uplo_ = cython.int, trans_ = cython.int)
   n = cython.cast(cython.int, C.shape[0])
   k = cython.cast(cython.int, A.shape[0] if trans == b'N' else A.shape[1])
   lda = cython.cast(cython.int, A.shape[1])
@@ -117,12 +132,15 @@ def ssyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   # assert (A.shape[1] if trans == b'N' else A.shape[0]) == n
   # assert C.shape[1] == n
 
-  # !!! uplo 'L' and 'U' mixed up !!!
   if cython.compiled:
+    uplo_  = 0 if  uplo == b'L' else 1  # L if L else U
+    trans_ = 0 if trans == b'N' else 1  # N if N else T
     cython_blas.ssyrk(cython.address(uplo), cython.address(trans), cython.address(n), cython.address(k),
                       cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
                       cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
   else:
+    uplo  = b'U' if  uplo == b'L' else b'L'  # U if L else L
+    trans = b'N' if trans == b'N' else b'T'  # N if N else T
     scipy_blas.ssyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 1 if uplo != b'U' else 0, 1)
 
 @cython.cfunc
@@ -133,6 +151,8 @@ def ssyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
 def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   """ C = alpha * trans(A * A^T) + beta * C """
   cython.declare(n=cython.int, k=cython.int, lda=cython.int, ldc=cython.int)
+  cython.declare(uplo_ = cython.int, trans_ = cython.int)
+  cython.declare(hndl = cython.size_t, orig_mode = cython.int)
   n = cython.cast(cython.int, C.shape[0])
   k = cython.cast(cython.int, A.shape[0] if trans == b'N' else A.shape[1])
   lda = cython.cast(cython.int, A.shape[1])
@@ -140,50 +160,136 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   # assert (A.shape[1] if trans == b'N' else A.shape[0]) == n
   # assert C.shape[1] == n
 
-  if cython.compiled:
-    #    if not USE_GPU:
-    uplo = b'U' if uplo != b'U' else b'L'
-    cython_blas.dsyrk(cython.address(uplo), cython.address(trans), cython.address(n), cython.address(k),
-                      cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
-                      cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
+  # A and C have to be transposed to comply with F-order
+
+  if USE_GPU == 0:
+    if not cython.compiled:
+      # print("MKL DSYRK")  # Verified on nov 30
+      uplo_  = 0 if  uplo == b'L' else 1  # L if L else U
+      trans_ = 0 if trans == b'N' else 1  # N if N else T
+      scipy_blas.dsyrk(alpha, A.T, beta, C.T, trans_, uplo_, 1)
+    else:
+      # print("MKL NATIVE DSYRK")  # Verified on nov 30
+      uplo  = b'U' if  uplo == b'L' else b'L'  # U if L else L
+      trans = b'N' if trans == b'N' else b'T'  # N if N else T
+      cython_blas.dsyrk(cython.address(uplo),  cython.address(trans),
+                        cython.address(n),     cython.address(k),
+                        cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
+                        cython.address(beta),  cython.address(C[0, 0]), cython.address(ldc))
   else:
-    # A and C have to be transposed to comply with F-order
-    scipy_blas.dsyrk(alpha, A.T, beta, C.T, 1 if trans != b'N' else 0, 0 if uplo != b'U' else 1, 1)
+    if not cython.compiled:
+      # print("CUDA DSYRK")  # Verified on nov 30
+      dA = cp.asarray(A.T)
+      dC = cp.asarray(C.T)
+      a = cp.array(alpha, dtype=dA.dtype)
+      b = cp.array(beta,  dtype=dA.dtype)
+
+      hndl = nvmath_cublas.create()
+      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
+      nvmath_cublas.set_pointer_mode(hndl, 1)
+
+      uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
+      trans_ = 0 if trans == b'N' else 1  # N if N else T
+      nvmath_cublas.dsyrk(hndl, uplo_, trans_, n, k,
+                          a.data.ptr, dA.data.ptr, lda,
+                          b.data.ptr, dC.data.ptr, ldc)
+
+      # Copy out and restore mode
+      np.asarray(C)[:] = cp.asnumpy(dC.T)
+      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
+      nvmath_cublas.destroy(hndl)
+    else:
+      # print("CUDA NATIVE DSYRK")  # Verified on nov 30
+      dA = cp.asarray(A)
+      dC = cp.asarray(C)
+      a = cp.array(alpha, dtype=dA.dtype)
+      b = cp.array(beta,  dtype=dA.dtype)
+
+      hndl = nvmath_cublas.create()
+      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
+      nvmath_cublas.set_pointer_mode(hndl, 1)
+
+      uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
+      trans_ = 0 if trans == b'N' else 1  # N if N else T
+      nvmath_cublas.dsyrk(hndl, uplo_, trans_, n, k,
+                          a.data.ptr, dA.data.ptr, lda,
+                          b.data.ptr, dC.data.ptr, ldc)
+
+      # Copy out and restore mode
+      np.asarray(C)[:] = cp.asnumpy(dC)
+      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
+      nvmath_cublas.destroy(hndl)
 
 @cython.cfunc
 @cython.inline
 @cython.returns(cython.void)
-@cython.locals(a='double[:,::1]', b='double[:,::1]', c='double[:,::1]',
+@cython.locals(A='double[:,::1]', B='double[:,::1]', C='double[:,::1]',
                transa=cython.char, transb=cython.char,
                alpha=cython.double, beta=cython.double)
-def dgemm(a, b, c, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
+def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
   """ C = alpha * transa(A) * transb(B) + beta * C """
   cython.declare(n=cython.int, m=cython.int, k=cython.int, lda=cython.int, ldb=cython.int, ldc=cython.int)
-  n = cython.cast(cython.int, c.shape[0])
-  m = cython.cast(cython.int, c.shape[1])
-  k = cython.cast(cython.int, a.shape[0] if transa == b'N' else a.shape[1])
-  lda = cython.cast(cython.int, a.shape[1])
-  ldb = cython.cast(cython.int, b.shape[1])
-  ldc = cython.cast(cython.int, c.shape[1])
-  # assert (b.shape[0] if transb == b'N' else b.shape[1]) == n
-  # assert (a.shape[1] if transa == b'N' else a.shape[0]) == m
-  # assert (b.shape[1] if transb == b'N' else b.shape[0]) == k
+  n = cython.cast(cython.int, C.shape[0])
+  m = cython.cast(cython.int, C.shape[1])
+  k = cython.cast(cython.int, A.shape[0] if transa == b'N' else A.shape[1])
+  lda = cython.cast(cython.int, A.shape[1])
+  ldb = cython.cast(cython.int, B.shape[1])
+  ldc = cython.cast(cython.int, C.shape[1])
+  # assert (B.shape[0] if transb == b'N' else B.shape[1]) == n
+  # assert (A.shape[1] if transa == b'N' else A.shape[0]) == m
+  # assert (B.shape[1] if transb == b'N' else B.shape[0]) == k
 
-  if cython.compiled:
-    cython_blas.dgemm(cython.address(transa), cython.address(transb),
+  # if USE_GPU == 0:
+  if True:
+    # DGEMM is not ready yet
+    if cython.compiled:
+      cython_blas.dgemm(cython.address(transa), cython.address(transb),
                       cython.address(m), cython.address(n), cython.address(k),
-                      cython.address(alpha), cython.address(a[0, 0]), cython.address(lda),
-                      cython.address(b[0, 0]), cython.address(ldb),
-                      cython.address(beta), cython.address(c[0, 0]), cython.address(ldc))
+                      cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
+                      cython.address(B[0, 0]), cython.address(ldb),
+                      cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
+    else:
+      scipy_blas.dgemm(alpha, A.T, B.T, beta, C.T, 1 if transa != b'N' else 0, 1 if transb != b'N' else 0, 1)
   else:
-    scipy_blas.dgemm(alpha, a.T, b.T, beta, c.T, 1 if transa != b'N' else 0, 1 if transb != b'N' else 0, 1)
+    if cython.compiled:
+      hndl = nvmath_cublas.create()
+      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
+      # host mode throws "fatal exception: access violation" in dgemm
+      nvmath_cublas.set_pointer_mode(hndl, 1)
+
+      dA = cp.asarray(A)
+      dB = cp.asarray(B)
+      dC = cp.asarray(C)
+      devPtrA = cython.cast(size_t, dA.data.ptr)
+      devPtrB = cython.cast(size_t, dB.data.ptr)
+      devPtrC = cython.cast(size_t, dC.data.ptr)
+
+      a = cp.array(alpha, dtype=dA.dtype)
+      b = cp.array(beta,  dtype=dA.dtype)
+
+      # nvmath_cublas.dgemm(...)
+
+      # Copy out and restore mode
+      np.asarray(C)[:] = cp.asnumpy(dC)
+      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
+      nvmath_cublas.destroy(hndl)
+    else:
+      dA = cp.asarray(A)
+      dB = cp.asarray(B)
+      dC = cp.asarray(C)
+      # nvmath_cublas.gemm(...)
+      np.asarray(C)[:] = cp.asnumpy(dC)
 
 ################################ LOCAL HELPERS ################################
 @cython.cfunc
 @cython.locals(i=cython.Py_ssize_t, tr_len=cython.Py_ssize_t)
 def _block_index(i, tr_len):
   j = slice(i, tr_len)
-  k = slice(tr_len * i - (i - 1) * i // 2, tr_len * (i + 1) - (i + 1) * i // 2)
+
+  cython.declare(kfrom=cython.Py_ssize_t, kto=cython.Py_ssize_t)
+  kfrom = tr_len *       i - (i - 1) * i // 2
+  kto   = tr_len * (i + 1) - (i + 1) * i // 2
+  k = slice(kfrom, kto)
   return j, k
 
 
@@ -294,7 +400,7 @@ def _rmoms2cmoms2D(raw, ave, n, lm, rm, i, j):
 
   inv_n = 1.0 / n
   ave_i = ave[i]  # i is a scalar
-  ave_j = ave[j]  # j is a slice such that indices (j, j) add diagonal!
+  ave_j = ave[j]  # j is a slice such that indices (j, j) add the diagonal!
 
   # Expressions for conversions raw moments to central moments in the
   # Horner representation auto-generated with sympy, group order (mu_j, mu_i)
@@ -338,16 +444,16 @@ def _rmoms2cmoms2D(raw, ave, n, lm, rm, i, j):
     M_44 = raw[3, :, 3, :]   # 3
     m = ave_j * (-4 * M_34[j, i] \
                 + ave_i * (16 * M_33[i, j] \
-                          + ave_i * (-24 * M_23[i, j] + ave_i * (-4 * M_12[j, j].diagonal() * ave_i + 16 * M_13[i, j]))) \
+                          + ave_i * (-24 * M_23[i, j] + ave_i * (-4 * ave_i * M_12[j, j].diagonal() + 16 * M_13[i, j]))) \
                 + ave_j * (6 * M_24[j, i] \
                           + ave_i * (-24 * M_23[j, i] \
                                     + ave_i * (36 * M_22[i, j] \
-                                              + ave_i * ((6 * ave_i) * M_11[j, j].diagonal() - 24 * M_12[i, j]))) \
+                                              + ave_i * (6 * ave_i * M_11[j, j].diagonal() - 24 * M_12[i, j]))) \
                           + ave_j * (-4 * M_14[j, i] \
                                     + ave_i * (16 * M_13[j, i] + ave_i * (16 * ave_i * M_11[i, j] - 24 * M_12[j, i])) \
                                     + ave_j * (M_13[i, i] \
                                               + ave_i * (-4 * M_12[i, i] + ave_i * (6 * M_11[i, i] - 7* n * ave_i ** 2)))))) \
-        + ave_i * (-4 * M_34[i, j] + ave_i * (6 * M_24[i, j] + ave_i * (M_13[j, j].diagonal() * ave_i - 4 * M_14[i, j]))) \
+        + ave_i * (-4 * M_34[i, j] + ave_i * (6 * M_24[i, j] + ave_i * (ave_i * M_13[j, j].diagonal() - 4 * M_14[i, j]))) \
         + M_44[i, j]
   else:
     m = _rmoms2cmoms2D_general(raw, ave, n, lm, rm, i, j)
@@ -993,10 +1099,9 @@ class bivar_txtbk(_BivarNpassBase):
 
 ##################################### VTK #####################################
 # Used for benchmarking only
-if is_vtk_installed():
+if chk_vtk_installed(USE_VTK):
   import vtk
   from vtk.util.numpy_support import numpy_to_vtk as np2vtk, vtk_to_numpy as vtk2np
-
 
 class bivar_vtk(object):
   """A class, using vtk multivariate kernel. Covariance ONLY!!!"""
@@ -1208,7 +1313,7 @@ class univar_sum(_AccBase):
     tr_lyt[:, 0] = 1
     tr_lyt_view = tr_lyt[:, 1:].reshape(batch_cnt, moment, tr_len)
 
-    # Step 1: Create trace layout matrix up to moment degree
+    # Step 1: Create layout matrix up to moment degree
     tr_lyt_view[:, 0, :] = traces
     for j in range(1, moment):
       np.multiply(tr_lyt_view[:, 0, :], tr_lyt_view[:, j - 1, :], tr_lyt_view[:, j, :])

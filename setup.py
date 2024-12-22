@@ -6,6 +6,7 @@ import setuptools
 import subprocess
 
 from Cython.Build import cythonize
+import Cython.Distutils.extension as cython_extension
 
 
 if sys.version_info < (3, 6, 0):
@@ -15,6 +16,24 @@ if sys.version_info < (3, 6, 0):
 kwargs = {}
 basedir = os.path.abspath(os.path.dirname(__file__))
 USE_CYTHON = os.path.isfile(os.path.join(basedir, "statmoments/_native.pyx"))
+
+USE_CUPY_CUDA = 0
+_cythonize_env = {'USE_CUPY_CUDA': 0}
+
+try:
+  import cupy as cp  # noqa: F401
+  import nvmath.bindings.cublas as nvmath_cublas  # noqa: F401
+  USE_CUPY_CUDA = 1
+  # Compilation settings for cupy and _native.pyx
+  _cythonize_env = {
+      'CUPY_CUDA_VERSION': 124,
+      'CUPY_HIP_VERSION': 0,
+      'CUPY_USE_CUDA_PYTHON': 0,
+      'USE_CUPY_CUDA': USE_CUPY_CUDA
+  }
+  print("nvmath found and used")
+except ModuleNotFoundError:
+  print("Unable to use GPU: nvmath is not installed")
 
 
 def make_ext(modname, filename):
@@ -33,10 +52,14 @@ def make_ext(modname, filename):
     # link_args.extend(['/DEBUG'])        # Output PDB in link time
     pass
 
-  ext = setuptools.Extension(modname,
-                             [filename],
-                             extra_compile_args=compile_args,
-                             extra_link_args=link_args)
+ # Always rebuild. TODO: delete force later
+  ext = cython_extension.Extension(modname, [filename],
+                                   extra_compile_args=compile_args,
+                                   extra_link_args=link_args,
+                                   cython_compile_time_env=_cythonize_env,
+                                   # cython_gdb = True,
+                                   # force = True # always rebuild
+                                   )
   return ext
 
 
@@ -46,23 +69,6 @@ def get_version():
   with open(version_path) as h:
     exec(h.read(), None, _version_dict)
   return _version_dict['__version__']
-
-# TODO: Add CUDA
-# from Cython.Distutils import build_ext
-# class build_ext_cupy(build_ext):
-#  def __init__(self, *argc, **kw):
-#    super().__init__(*argc, **kw)
-#    cythonize_options = {
-#      'CUPY_CUDA_VERSION'    : 115,
-#      'CUPY_HIP_VERSION'     : 0,
-#      'CUPY_USE_CUDA_PYTHON' : 0,
-#    }
-
-#    self.cython_compile_time_env = cythonize_options
-#    self.force = True # TODO: delete this later
-
-#  setuptools.setup(
-#    cmdclass = {'build_ext' : build_ext_cupy},
 
 
 def store_git_hash():
@@ -79,9 +85,13 @@ def main():
   if store_git_hash():
     kwargs["package_data"] = {"statmoments": ["GIT_VERSION.txt"]}
 
-  ext = '.pyx' if USE_CYTHON else '.c'
-  extensions = [make_ext("statmoments._native", 'statmoments/_native' + ext)]
-  extensions = cythonize('statmoments/_native' + ext) if USE_CYTHON else extensions
+  extensions = []
+  if USE_CYTHON:
+    # Cythonize
+    extensions = cythonize('statmoments/_native.pyx', compile_time_env=_cythonize_env)
+  else:
+    # Compile c code
+    extensions = [make_ext("statmoments._native", 'statmoments/_native.c')]
   setuptools.setup(
       version=get_version(),
       ext_modules=extensions,

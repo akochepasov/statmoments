@@ -29,7 +29,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
@@ -66,14 +66,3 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: unittests
         fail_ci_if_error: true  # CI fails if Codecov upload fails
-
-    # - name: Prepare python packages
-    #   run: |
-    #       python setup.py sdist bdist_wheel
-
-    # - name: Store the distribution packages
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: python-package-distributions
-    #     path: dist/
-    #     retention-days: 7
