@@ -27,16 +27,28 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
     - name: Upgrade pip
       run: python -m pip install -U pip setuptools wheel
+
     - name: Install python dependencies
       run: |
-        python -m pip install flake8 pytest cython Cython
         pip install -r requirements.txt
+        pip install flake8 pytest coverage cython Cython
+
     - name: Test with pytest
       run: |
         pip install -e .
         pytest --durations=0 .
+
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
