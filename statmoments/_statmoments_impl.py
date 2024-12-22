@@ -1,6 +1,7 @@
 import os
 import logging
 import argparse
+from abc import ABC, abstractmethod
 from itertools import islice
 from timeit import default_timer as _timer
 from psutil import virtual_memory as _vmem
@@ -71,7 +72,7 @@ class _BaseImpl(object):
 
   @property
   def moment(self):
-    """The maximum statistical moment."""
+    """The maximal available statistical moment."""
     return self._impl.moment
 
   @property
@@ -204,7 +205,7 @@ class Univar(_BaseImpl):
 
 # ============================= CLI INTERFACE ============================= #
 
-class _CliCommon(object):
+class _CliCommon(ABC):
   def iterate_dataset(self, infile, outdir, **kwargs):
     engine, engine_memsz = None, None
 
@@ -268,15 +269,11 @@ class _CliCommon(object):
       self.save_results(engine, outdir, {f'!{k_traces}k.proc.log': output})
       logging.info(output)
 
-  def save_results(self, engine, dirname, meta={}):
-    os.makedirs(dirname, exist_ok=True)
-    # Mean of the whole dataset
-    # save_npy(os.path.join(dirname, 'mean'), engine.mean())
+  @abstractmethod
+  def create_engine(self, tr_len, cl_len, **options):
+    pass
 
-    for fn, content in meta.items():
-      with open(os.path.join(dirname, fn), 'w') as f:
-        f.write(content)
-
+  @abstractmethod
   def create_parser(self):
     class JsonParam(argparse.Action):
       def __call__(self, parser, namespace, items, option_string=None):
@@ -309,6 +306,16 @@ class _CliCommon(object):
                         help='1 = use central moments, 0 = use raw moments (default: heuristic)')
 
     return parser
+
+  @abstractmethod
+  def save_results(self, engine, dirname, meta={}):
+    os.makedirs(dirname, exist_ok=True)
+    # Mean of the whole dataset
+    # save_npy(os.path.join(dirname, 'mean'), engine.mean())
+
+    for fn, content in meta.items():
+      with open(os.path.join(dirname, fn), 'w') as f:
+        f.write(content)
 
   def run(self):
     params = vars(self.create_parser().parse_args())
