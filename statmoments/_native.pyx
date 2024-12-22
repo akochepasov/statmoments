@@ -1,11 +1,6 @@
 #!python
 #cython: boundscheck=False, cdivision=True, initializedcheck=False, nonecheck=False, overflowcheck=False, profile=False, wraparound=False
 
-# Papers to research numerical stability:
-#  W. Kahan "Further remarks on reducing truncation errors", 1965
-#  B.P. Welford "Note on a method for calculating corrected sums of squares and products", 1962
-#  D.H.D. West "Updating mean and Variance Estimates: An improved method", 1979
-
 import cython
 import numpy as np
 import scipy.linalg.blas as scipy_blas

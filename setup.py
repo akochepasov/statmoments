@@ -71,7 +71,6 @@ def get_version():
   return _version_dict['__version__']
 
 
-
 def store_git_hash():
   try:
     commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip().decode("utf-8")
