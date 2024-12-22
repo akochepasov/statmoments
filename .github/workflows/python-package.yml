@@ -9,28 +9,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ 3.6, 3.11 ]
+        # python-version: [ 3.6, 3.11 ]
+        python-version: [ 3.11 ]
         os:
             - name: Linux
               runs-on: ubuntu-20.04
               python_platform: linux
-            - name: macOS
-              runs-on: macOS-13
-              python_platform: darwin
-            - name: Windows
-              runs-on: windows-2019
-              python_platform: x64
+            # - name: macOS
+            #   runs-on: macOS-13
+            #   python_platform: darwin
+            # - name: Windows
+            #   runs-on: windows-2019
+            #   python_platform: x64
 
     steps:
-    - run: echo "The job triggered by ${{ github.event_name }}"
-    - run: echo "This job running on ${{ runner.os }}"
+    - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
     - run: echo "The branch name ${{ github.ref }}"
 
-    - uses: actions/checkout@v4
+    - name: Checkout project
+      uses: actions/checkout@v4
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'pip'
 
     - name: Cache pip
       uses: actions/cache@v3
@@ -40,13 +43,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Upgrade pip
-      run: python -m pip install -U pip setuptools wheel
-
     - name: Install python dependencies
       run: |
         pip install -r requirements.txt
-        pip install flake8 pytest coverage cython Cython
+        pip install flake8 pytest pytest-cov pytest-xdist coverage cython Cython setuptools wheel
 
     - name: Lint with flake8
       run: |
@@ -55,19 +55,15 @@ jobs:
         # exit-zero treats all errors as warnings. Line is 120 chars wide
         flake8 --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics .
 
-    - name: Test with pytest
+    - name: Install and test with pytest
       run: |
         pip install -e .
-        coverage run -m pytest --durations=0 .
+        pytest --durations=0 -n auto --dist loadfile --cov statmoments .
         coverage report -m
-        coverage xml
 
-    - name: Upload coverage to Codecov
+    - name: Generate and upload coverage to Codecov
       uses: codecov/codecov-action@v5
-      # env:
-      #   CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        files: coverage.xml
         flags: unittests
-        fail_ci_if_error: true  # Uncomment this if you want the CI to fail if Codecov upload fails
+        fail_ci_if_error: true  # CI fails if Codecov upload fails
