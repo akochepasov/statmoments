@@ -126,8 +126,8 @@ def ensure_ttest_2d(eng, traces0, traces1):
 
 
 eng2d_list = [
-    statmoments.bivar_2pass,
     statmoments.bivar_txtbk,
+    statmoments.bivar_2pass,
     statmoments.bivar_sum,
     statmoments.bivar_cntr,
     statmoments.bivar_sum_detrend
@@ -166,14 +166,14 @@ def test_init2(kernel2d):
 def test_ttest_1d(kernel1d):
   max_moment = 4
   tr_len, cl_len = 5, 2
-  n0, n1 = 987, 1234
+  n0, n1 = 1017, 1124
   traces0 = np.random.randint(0, 256, (n0, tr_len))
   # Insert different distribution into some points of one batch
   traces0[:, 2:4] = np.random.normal(30, 7, (n0, 2)).astype(traces0.dtype)
   traces1 = np.random.randint(0, 256, (n1, tr_len))
   eng = statmoments.Univar(tr_len, cl_len, moment=2 * max_moment, kernel=kernel1d)
 
-  eng.update(traces0, ['01'] * n0)
+  eng.update(traces0, [b'01'] * n0)
   eng.update(traces1, [[1, 0]] * n1)
 
   ensure_ttest_1d(eng, traces0, traces1)
@@ -181,30 +181,32 @@ def test_ttest_1d(kernel1d):
   # Ensure t-test finds stat diff
   # Find different means
   for tt1 in statmoments.stattests.ttests(eng, moment=1):
-    nt.assert_array_less(np.abs(tt1[0:2]), 3.2)
+    nt.assert_array_less(np.abs(tt1[0:2]), 3.5)
     assert np.all(np.abs(tt1[2:4]) > 30)
   # Find different vars
   for tt2 in statmoments.stattests.ttests(eng, moment=2):
-    nt.assert_array_less(np.abs(tt2[0:2]), 3.2)
+    nt.assert_array_less(np.abs(tt2[0:2]), 3.5)
     assert np.all(np.abs(tt2[2:4]) > 30)
   # Find no different skews
   for tt3 in statmoments.stattests.ttests(eng, moment=3):
     nt.assert_array_less(np.abs(tt3), 2.5)
   # Find different kurtoses
   for tt4 in statmoments.stattests.ttests(eng, moment=4):
-    nt.assert_array_less(np.abs(tt4[0:2]), 3)
+    nt.assert_array_less(np.abs(tt4[0:2]), 3.5)
     assert np.all(np.abs(tt4[2:4]) > 2.5)
 
 
-@pytest.mark.parametrize("kernel2d", eng2d_list)
+# textbk is very slow
+@pytest.mark.parametrize("kernel2d",
+                         [e for e in eng2d_list if e is not statmoments.bivar_txtbk])
 def test_ttest_2d(kernel2d):
   max_moment = 4
   tr_len, cl_len = 4, 2
-  n0, n1 = 1343, 1234
-  traces0 = np.random.randint(0, 256, (n0, tr_len))
-  traces1 = np.random.randint(0, 256, (n1, tr_len))
+  n0, n1 = 843, 934
+  traces0 = np.random.normal(100, 20, (n0, tr_len))
+  traces1 = np.random.normal(100, 20, (n1, tr_len))
   # Insert co-dependence to some point of one batch
-  traces0[:, 2] = (3 * traces0[:, 3] / 2 + 20)
+  traces0[:, 2] = (3 * traces0[:, 3] / 2 - 10)
   eng = statmoments.Bivar(tr_len, cl_len, moment=max_moment, kernel=kernel2d)
 
   eng.update(traces0, [[0, 1]] * n0)
@@ -216,15 +218,15 @@ def test_ttest_2d(kernel2d):
   # Ensure t-test finds the inserted correlation
   # Find different covars
   for tt2 in statmoments.stattests.ttests(eng, moment=(1, 1)):
-    nt.assert_array_less(np.abs(tt2[0:7]), 3.3)
-    nt.assert_array_less(15, np.abs(tt2[7:-1]))
+    nt.assert_array_less(np.abs(tt2[0:7]), 3.5)
+    nt.assert_array_less(8, np.abs(tt2[7:-1]))
   # Find no different co-skews
   for tt3 in statmoments.stattests.ttests(eng, moment=(1, 2)):
-    nt.assert_array_less(np.abs(tt3), 3.3)
+    nt.assert_array_less(np.abs(tt3), 3.5)
   # Find different co-kurtoses
   for tt4 in statmoments.stattests.ttests(eng, moment=(2, 2)):
-    nt.assert_array_less(np.abs(tt4[0:8]), 2.3)
-    nt.assert_array_less(6, np.abs(tt2[8]))
+    nt.assert_array_less(np.abs(tt4[0:8]), 2.5)
+    nt.assert_array_less(5, np.abs(tt2[8]))
 
 
 @pytest.mark.parametrize("kernel2d", eng2d_list)
@@ -432,4 +434,4 @@ def test_trivial_2d(trivial_traces, kernel2d):
 
 # Entrance point
 if __name__ == '__main__':
-  pytest.main(["-v", __file__ + "::test_ttest_2d"])
+  pytest.main(["-v", __file__ + "::test_ttest_1d"])

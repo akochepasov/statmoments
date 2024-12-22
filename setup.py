@@ -64,6 +64,7 @@ def get_version():
 #  setuptools.setup(
 #    cmdclass = {'build_ext' : build_ext_cupy},
 
+
 def store_git_hash():
   try:
     commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip().decode("utf-8")
@@ -76,7 +77,7 @@ def store_git_hash():
 
 def main():
   if store_git_hash():
-    kwargs["package_data"] = {"statmoments" : ["GIT_VERSION.txt"]}
+    kwargs["package_data"] = {"statmoments": ["GIT_VERSION.txt"]}
 
   ext = '.pyx' if USE_CYTHON else '.c'
   extensions = [make_ext("statmoments._native", 'statmoments/_native' + ext)]
