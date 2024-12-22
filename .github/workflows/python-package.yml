@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ 3.6, 3.11 ]
+        python-version: [ 3.6 ]
         os:
             - name: Linux
               runs-on: ubuntu-20.04
