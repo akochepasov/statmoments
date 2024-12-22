@@ -172,7 +172,7 @@ def test_comoments_all_kernels(kernel2d, normalized):
   eng = statmoments.Bivar(tr_len, cl_len, kernel=kernel2d, moment=4, normalize=normalized)
 
   eng.update(traces0, ['0'] * n0)
-  eng.update(traces1, ['1'] * n1)
+  eng.update(traces1, [b'1'] * n1)
 
   _ensure_mom(eng, traces0, traces1, normalized)
   _ensure_comom(eng, traces0, traces1, normalized)

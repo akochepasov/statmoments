@@ -3,6 +3,7 @@ import shutil
 
 import numpy as np
 
+
 def str2bits(hexdata):
   if not hexdata.startswith('0x'):
     return hexdata  # binary data
@@ -47,5 +48,3 @@ def uni2bivar(data, lm=1, rm=1, normalize=True):
     sd = np.std(data, axis=0, ddof=0)
   res = [triu_flatten(np.outer((tr / sd) ** lm, (tr / sd) ** rm)) for tr in meanfree(data)]
   return res
-
-
