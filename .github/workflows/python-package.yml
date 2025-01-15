@@ -9,18 +9,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # python-version: [ 3.6, 3.12 ]
-        python-version: [ 3.12 ]
+        python-version: [ 3.6, 3.12 ]
         os:
           - name: Linux
             runs-on: ubuntu-20.04
             python_platform: linux
-          # - name: macOS
-          #   runs-on: macOS-13
-          #   python_platform: darwin
-          # - name: Windows
-          #   runs-on: windows-2019
-          #   python_platform: x64
+          - name: macOS
+            runs-on: macOS-13
+            python_platform: darwin
+          - name: Windows
+            runs-on: windows-2019
+            python_platform: x64
 
     steps:
       - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
@@ -121,8 +120,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04]
-        python-version: [3.12]
+        os: [ubuntu-20.04, macOS-13, windows-2019]
+        python-version: [3.6, 3.12]
 
     steps:
       - name: Checkout project
