@@ -76,10 +76,53 @@ jobs:
           flags: unittests
           fail_ci_if_error: true
 
-  build:
+  # build_sdist:
+  #   name: Build sdist
+  #   needs: build-test
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.12'
+  #         cache: 'pip'
+
+  #     - name: Install build dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install build wheel
+
+  #     - name: Build package
+  #       run: python -m build
+
+  #     - name: Install build dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install build wheel
+
+  #     - name: Build package
+  #       run: python -m build --sdist
+
+  #     - name: Upload artifacts
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: dist
+  #         path: dist/
+
+
+  build-wheels:
+    name: Wheels on ${{ matrix.os }} ${{ matrix.python-version }}
     needs: build-test
-    name: Build Package
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04]
+        python-version: [3.12]
 
     steps:
       - name: Checkout project
@@ -90,13 +133,21 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
           cache: 'pip'
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build wheel
+          pip install cython build setuptools wheel
 
       - name: Build package
         run: python -m build
