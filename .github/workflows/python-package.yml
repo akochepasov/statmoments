@@ -4,78 +4,6 @@ name: Building Python Package
 on: [push]
 
 jobs:
-  # build-test:
-  #   name: ${{ matrix.os.name }} ${{ matrix.python-version }}
-  #   runs-on: ${{ matrix.os.runs-on }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       python-version: [ 3.6, 3.12 ]
-  #       os:
-  #         - name: Linux
-  #           runs-on: ubuntu-20.04
-  #           python_platform: linux
-  #         - name: macOS
-  #           runs-on: macOS-13
-  #           python_platform: darwin
-  #         # - name: Windows
-  #         #   runs-on: windows-2019
-  #         #   python_platform: x64
-
-  #   steps:
-  #     - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
-  #     - run: echo "The branch name ${{ github.ref }}"
-
-  #     - name: Checkout project
-  #       uses: actions/checkout@v4
-  #       # with:
-  #       #   fetch-depth: 0
-
-  #     - name: Set up Python ${{ matrix.python-version }}
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #         cache: 'pip'
-
-  #     - name: Cache pip
-  #       uses: actions/cache@v3
-  #       with:
-  #         path: ~/.cache/pip
-  #         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-pip-
-
-  #     - name: Install build-test dependencies
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         # Build requirements
-  #         pip install flake8 pytest pytest-cov pytest-xdist coverage cython Cython setuptools wheel build
-  #         # Main requirements
-  #         pip install -r requirements.txt
-
-  #     - name: Lint with flake8
-  #       run: |
-  #         # stop the build if there are Python syntax errors or undefined names
-  #         flake8 --count --select=E9,F63,F7,F82 --show-source --statistics .
-  #         # exit-zero treats all errors as warnings. Line is 120 chars wide
-  #         flake8 --count --exit-zero --max-line-length=120 --max-complexity=10 --statistics .
-
-  #     - name: Build the package
-  #       run: |
-  #         pip install -e .
-
-  #     - name: Run tests and generate coverage report
-  #       run: |
-  #         pytest --durations=0 -n auto --dist loadfile --cov=statmoments .
-  #         coverage report -m
-
-  #     - name: Generate and upload coverage to Codecov
-  #       uses: codecov/codecov-action@v5
-  #       with:
-  #         token: ${{ secrets.CODECOV_TOKEN }}
-  #         flags: unittests
-  #         fail_ci_if_error: true
-
   build-sdist:
     name: Build sdist
     runs-on: ubuntu-20.04
@@ -114,7 +42,7 @@ jobs:
           path: dist/*.tar.gz
           retention-days: 1
 
-  build-wheels:
+  build-test-wheels:
     name: Wheels on ${{ matrix.os }} ${{ matrix.python-version }}
     # needs: build-test
     runs-on: ${{ matrix.os }}
@@ -160,9 +88,42 @@ jobs:
           path: dist/*.whl
           retention-days: 1
 
+      - name: Install test dependencies
+        run: |
+          # Build and test requirements
+          pip install flake8 pytest pytest-cov pytest-xdist coverage
+          # Main requirements
+          pip install -r requirements.txt
+          # The package
+          pip install -e .
+
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 --count --select=E9,F63,F7,F82 --show-source --statistics .
+          # exit-zero treats all errors as warnings. Line is 120 chars wide
+          flake8 --count --exit-zero --max-line-length=120 --max-complexity=10 --statistics .
+
+      - name: Run tests and generate coverage report
+        run: |
+          pytest --durations=0 -n auto --dist loadfile --cov=statmoments .
+          coverage report -m
+
+      - name: Generate and upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unittests
+          fail_ci_if_error: true
+
+  # build-test:
+  #   steps:
+  #     - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
+  #     - run: echo "The branch name ${{ github.ref }}"
+
   collect-artifacts:
     name: Collect all artifacts
-    needs: [build-wheels, build-sdist]
+    needs: [build-test-wheels, build-sdist]
     runs-on: ubuntu-20.04
     steps:
       - name: Download all wheels
