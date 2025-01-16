@@ -17,9 +17,9 @@ jobs:
           - name: macOS
             runs-on: macOS-13
             python_platform: darwin
-          - name: Windows
-            runs-on: windows-2019
-            python_platform: x64
+          # - name: Windows
+          #   runs-on: windows-2019
+          #   python_platform: x64
 
     steps:
       - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
@@ -120,6 +120,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # os: [ubuntu-20.04, macOS-13, windows-2019]
         os: [ubuntu-20.04, macOS-13, windows-2019]
         python-version: [3.6, 3.12]
 
@@ -155,11 +156,12 @@ jobs:
         with:
           name: dist-${{ matrix.os }}-${{ matrix.python-version }}-${{ strategy.job-index }}
           path: |
-            ./dist/*.whl
-            ./dist/*.tar.gz
+            dist
+            !./dist/*.tar.gz
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifact
           path: dist
+          merge-multiple: true
