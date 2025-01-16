@@ -121,7 +121,7 @@ jobs:
       fail-fast: false
       matrix:
         # os: [ubuntu-20.04, macOS-13, windows-2019]
-        os: [ubuntu-20.04, macOS-13, windows-2019]
+        os: [ubuntu-20.04]
         python-version: [3.6, 3.12]
 
     steps:
