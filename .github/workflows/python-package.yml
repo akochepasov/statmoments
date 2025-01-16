@@ -1,3 +1,4 @@
+
 name: Building Python Package
 
 on: [push]
@@ -109,6 +110,7 @@ jobs:
       - name: Upload sdist artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: package-sdist
           path: dist/*.tar.gz
           retention-days: 1
 
@@ -148,13 +150,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install cython build setuptools wheel
 
-      - name: Build package
+      - name: Build package ${{ matrix.os }} ${{ matrix.python-version }}
         run: python -m build
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wheel-${{ matrix.os }}-py${{ matrix.python-version }}
+          name: package-wheel-${{ matrix.os }}-py${{ matrix.python-version }}
           path: dist/*.whl
           retention-days: 1
 
@@ -166,7 +168,7 @@ jobs:
       - name: Download all wheels
         uses: actions/download-artifact@v4
         with:
-          pattern: wheel-*
+          pattern: package-*
           path: all-artifacts
           merge-multiple: true
 
