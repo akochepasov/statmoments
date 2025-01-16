@@ -163,8 +163,13 @@ jobs:
     needs: build-wheels
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/upload-artifact@v4
-        with:
+    - name: List files
+      run: |
+        ls -lRF  ~/artifacts
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
           path: |
             artifacts/*.whl
             !./dist/*.tar.gz
