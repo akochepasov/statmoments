@@ -155,5 +155,5 @@ jobs:
         with:
           name: dist-${{ matrix.os }}-${{ matrix.python-version }}-${{ strategy.job-index }}
           path: |
-            ./wheelhouse/*.whl
-            ./wheelhouse/*.tar.gz
+            ./dist/*.whl
+            ./dist/*.tar.gz
