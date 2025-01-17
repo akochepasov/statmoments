@@ -1,68 +1,154 @@
 name: Building Python Package
 
-on: [push]
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build-test-multiplatform:
-    name: ${{ matrix.os.name }} ${{ matrix.python-version }}
-    runs-on: ${{ matrix.os.runs-on }}
+  build-sdist:
+    name: Build sdist
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install cython build setuptools wheel
+
+      - name: Build package
+        run: python -m build --sdist
+
+      - name: Upload sdist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-sdist
+          path: dist/*.tar.gz
+          retention-days: 1
+
+  build-test-wheels:
+    name: ${{ matrix.python-version }} on ${{ matrix.os }} 
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ 3.6 ]
-        os:
-            - name: Linux
-              runs-on: ubuntu-20.04
-              python_platform: linux
-            - name: macOS
-              runs-on: macOS-13
-              python_platform: darwin
-            - name: Windows
-              runs-on: windows-2019
-              python_platform: x64
+        os: [ubuntu-20.04, macOS-13, windows-2019]
+        python-version: [3.6, 3.12]
 
     steps:
-    - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
-    - run: echo "The branch name ${{ github.ref }}"
+      - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
+      - run: echo "The branch name ${{ github.ref }}"
 
-    - name: Checkout project
-      uses: actions/checkout@v4
+      - name: Checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
 
-    - name: Cache pip
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-    - name: Install python dependencies
-      run: |
-        pip install -r requirements.txt
-        pip install flake8 pytest pytest-cov pytest-xdist coverage cython Cython setuptools wheel
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install cython build setuptools wheel
 
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 --count --select=E9,F63,F7,F82 --show-source --statistics .
-        # exit-zero treats all errors as warnings. Line is 120 chars wide
-        flake8 --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics .
+      - name: Build package ${{ matrix.os }} ${{ matrix.python-version }}
+        run: python -m build
 
-    - name: Install and test with pytest
-      run: |
-        pip install -e .
-        pytest --durations=0 -n auto --dist loadfile --cov statmoments .
-        coverage report -m
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-wheel-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: dist/*.whl
+          retention-days: 1
 
-    - name: Generate and upload coverage to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        flags: unittests
-        fail_ci_if_error: true  # CI fails if Codecov upload fails
+      - name: Install test dependencies
+        run: |
+          # Build and test requirements
+          pip install flake8 pytest pytest-cov pytest-xdist coverage
+          # Main requirements
+          pip install -r requirements.txt
+
+      - name: Install main package as editable
+        run: |
+          pip install -e .
+
+      - name: Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 --count --select=E9,F63,F7,F82 --show-source --statistics .
+          # exit-zero treats all errors as warnings
+          flake8 --count --exit-zero --max-line-length=120 --max-complexity=10 --statistics .
+
+      - name: Run tests and generate coverage report
+        run: |
+          pytest --durations=0 -n auto --dist loadfile --cov=statmoments .
+          coverage report -m
+
+      - name: Generate and upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unittests
+          fail_ci_if_error: true
+
+  collect-artifacts:
+    name: Collect all artifacts
+    needs: [build-test-wheels, build-sdist]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          path: all-artifacts
+          merge-multiple: true
+
+      - name: List downloaded artifacts
+        run: ls -R all-artifacts/
+
+      - name: Upload combined artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-artifacts
+          path: |
+            all-artifacts/*.whl
+            all-artifacts/*.tar.gz
+          retention-days: 7
+
+      - name: Delete intermediate artifacts
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: |
+            package-wheel-*
+            package-sdist
