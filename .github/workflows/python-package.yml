@@ -1,7 +1,10 @@
-
 name: Building Python Package
 
-on: [push]
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build-sdist:
@@ -48,14 +51,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # os: [ubuntu-20.04, macOS-13, windows-2019]
-        os: [ubuntu-20.04, macOS-13]
+        os: [ubuntu-20.04, macOS-13, windows-2019]
         python-version: [3.6, 3.12]
 
     steps:
       - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
       - run: echo "The branch name ${{ github.ref }}"
-      
+
       - name: Checkout project
         uses: actions/checkout@v4
         with:
@@ -132,8 +134,21 @@ jobs:
           path: all-artifacts
           merge-multiple: true
 
-      - name: Upload combined wheels
+      - name: List downloaded artifacts
+        run: ls -R all-artifacts/
+
+      - name: Upload combined artifacts
         uses: actions/upload-artifact@v4
         with:
           name: all-artifacts
-          path: all-artifacts/*.whl
+          path: |
+            all-artifacts/*.whl
+            all-artifacts/*.tar.gz
+          retention-days: 7
+
+      - name: Delete intermediate artifacts
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: |
+            package-wheel-*
+            package-sdist
