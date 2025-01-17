@@ -43,8 +43,7 @@ jobs:
           retention-days: 1
 
   build-test-wheels:
-    name: Wheels on ${{ matrix.os }} ${{ matrix.python-version }}
-    # needs: build-test
+    name: Build-test on ${{ matrix.os }} ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -54,6 +53,9 @@ jobs:
         python-version: [3.6, 3.12]
 
     steps:
+      - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
+      - run: echo "The branch name ${{ github.ref }}"
+      
       - name: Checkout project
         uses: actions/checkout@v4
         with:
@@ -94,7 +96,9 @@ jobs:
           pip install flake8 pytest pytest-cov pytest-xdist coverage
           # Main requirements
           pip install -r requirements.txt
-          # The package
+
+      - name: Install main package as editable
+        run: |
           pip install -e .
 
       - name: Lint with flake8
@@ -115,11 +119,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: unittests
           fail_ci_if_error: true
-
-  # build-test:
-  #   steps:
-  #     - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
-  #     - run: echo "The branch name ${{ github.ref }}"
 
   collect-artifacts:
     name: Collect all artifacts
