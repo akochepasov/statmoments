@@ -82,8 +82,8 @@ def store_git_hash():
 
 
 def main():
-  if store_git_hash():
-    kwargs["package_data"] = {"statmoments": ["GIT_VERSION.txt"]}
+  # if store_git_hash():
+  #   kwargs["package_data"] = {"statmoments": ["GIT_VERSION.txt"]}
 
   extensions = []
   if USE_CYTHON:
