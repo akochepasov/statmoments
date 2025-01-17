@@ -43,7 +43,7 @@ jobs:
           retention-days: 1
 
   build-test-wheels:
-    name: Build-test on ${{ matrix.os }} ${{ matrix.python-version }}
+    name: ${{ matrix.python-version }} on ${{ matrix.os }} 
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -103,9 +103,9 @@ jobs:
 
       - name: Lint with flake8
         run: |
-          # stop the build if there are Python syntax errors or undefined names
+          # Stop the build if there are Python syntax errors or undefined names
           flake8 --count --select=E9,F63,F7,F82 --show-source --statistics .
-          # exit-zero treats all errors as warnings. Line is 120 chars wide
+          # exit-zero treats all errors as warnings
           flake8 --count --exit-zero --max-line-length=120 --max-complexity=10 --statistics .
 
       - name: Run tests and generate coverage report
