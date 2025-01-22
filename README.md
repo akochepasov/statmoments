@@ -2,17 +2,14 @@
 
 Fast streaming univariate and bivariate moments and t-statistics.
 
-statmoments is a library for fast one-pass computation of univariate and bivariate moments for batches of waveforms or traces with thousands of sample points. It can compute Welch's t-test statistics for arbitrary data partitioning, helping find relationships and statistical differences among data splits. Using top BLAS implementations, statmoments preprocesses data to maximize computational efficiency on Windows and Linux.
+statmoments is a high-performance library for computing univariate and bivariate statistical moments in a single pass over large waveform datasets with thousands of sample points. It can produce Welch's t-test statistics for hypothesis testing on arbitrary data partitions.
 
 ## Features
 
-- Fast one-pass computation of arbitrary statistical moments
-- Support for both univariate and bivariate analysis
-- Real-time streaming capabilities
+- Streaming processing for both univariate and bivariate analysis
 - Efficient memory usage through dense matrix representation
-- Welch's t-test statistics for hypothesis testing
 - High numerical accuracy
-- Command-line interface for quick analysis
+- Command-line interface for analysis of existing datasets
 
 ## How is it different?
 
@@ -34,7 +31,6 @@ Univariate statistics analyze and describe a single variable or dataset. Common 
 
 - Descriptive Statistics: Summarizing central tendency, dispersion, and shape of a dataset
 - Hypothesis Testing: Determining significant differences or relationships between groups or conditions
-- Finance and Economics: Examining asset performance, tracking market trends, and assessing risk in real-time
 
 In summary, univariate statistics are fundamental for data analysis, providing essential insights into individual variables across various fields, aiding in decision-making and further research.
 
@@ -139,7 +135,11 @@ More examples can be found in the examples and tests directories.
 
 ## Implementation Notes
 
-Due to RAM limits, results are produced one at a time for each input classifier as the set of statistical moments. Each classifier's output moment has dimensions 2 x M x L, where M is an index of the requested classifier and L is the region length. The co-moments and t-tests is represented by a 1D array for each classifier. **Bivariate moments** are represented by the **upper triangle** of the symmetric matrix.
+statmoments uses top BLAS implementations, including GPU based on [nvmath-python](https://github.com/NVIDIA/nvmath-python) if available, for the best peformance on Windows, Linux and Macs,to maximize computational efficiency.
+
+Due to RAM limits, results are produced one at a time for each input classifier as the set of statistical moments. Each classifier's output moment has dimensions 2 x M x L, where M is an index of the requested classifier and L is the region length.
+
+The bivariate  results, co-moments and t-tests, are represented by the **upper triangle** of the symmetric matrix as 1D array for each classifier.
 
 ## Installation
 
