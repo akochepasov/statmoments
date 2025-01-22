@@ -25,24 +25,6 @@ Some of the benefits of streaming computation include:
 - Reduced data processing latency, crucial for time-sensitive applications
 - Scalability to handle large data volumes, essential for data-intensive research in fields like astrophysics and financial analysis
 
-## Where is this needed?
-
-Univariate statistics analyze and describe a single variable or dataset. Common applications include
-
-- Descriptive Statistics: Summarizing central tendency, dispersion, and shape of a dataset
-- Hypothesis Testing: Determining significant differences or relationships between groups or conditions
-
-In summary, univariate statistics are fundamental for data analysis, providing essential insights into individual variables across various fields, aiding in decision-making and further research.
-
-Bivariate statistics help understand relationships between two variables, aiding informed decisions across various fields. They address questions like:
-
-- Is there a statistically significant relationship between variables?
-- Which data points are related?
-- How strong is the relationship?
-- Can we use one variable to predict the other?
-
-These statistical methods are used in medical and bioinformatics research, astrophysics, seismology, market predictions, and other fields, handling input data measured in hundreds of gigabytes.
-
 ## Numeric accuracy
 
 The numeric accuracy of results depends on the coefficient of variation (COV) of a sample point in the input waveforms. With a COV of about 5%, the computed (co-)kurtosis has about 10 correct significant digits for 10,000 waveforms, sufficient for Welch's t-test. Increasing data by 100x loses one more significant digit.
