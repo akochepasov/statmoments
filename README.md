@@ -143,3 +143,6 @@ Anton Kochepasov, Ilya Stupakov, "An Efficient Single-pass Online Computation of
   doi={10.1109/BigData62323.2024.10825659}
 }
 ```
+
+[![PyPi Version](https://img.shields.io/pypi/v/statmoments.svg?style=flat-square)](https://pypi.org/project/statmoments/)
+[![PyPI pyversions](https://img.shields.io/pypi/pyversions/statmoments.svg?style=flat-square)](https://pypi.org/project/statmoments/)
