@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite our paper as below."
+title: "statmoments: A Python Library for Fast One-Pass Statistical (Co-)Moments Computation"
+authors:
+  - family-names: "Kochepasov"
+    given-names: "Anton"
+    orcid: "https://orcid.org/0009-0003-1136-0492"
+  - family-names: "Stupakov"
+    given-names: "Ilya"
+    affiliation: "Novosibirsk State Technical University"
+url: "https://github.com/akochepasov/statmoments"
+preferred-citation:
+  type: conference-paper
+  title: "An Efficient Single-pass Online Computation of Higher-Order Bivariate Statistics"
+  collection-title: "2024 IEEE International Conference on Big Data (BigData)"
+  collection-type: proceedings
+  conference:
+    name: "2024 IEEE International Conference on Big Data (BigData)"
+    location: "Washington DC, USA"
+    date-start: "2024-12-15"
+    date-end: "2024-12-18"
+  publisher: "IEEE"
+  doi: "10.1109/BigData62323.2024.10825659"
+  year: 2024
+  start: 123
+  end: 129
+  authors:
+    - family-names: "Kochepasov"
+      given-names: "Anton"
+      orcid: "https://orcid.org/0009-0003-1136-0492"
+    - family-names: "Stupakov"
+      given-names: "Ilya"
+      affiliation: "Novosibirsk State Technical University"
+keywords:
+  - "Statistical moments"
+  - "Numerical stability"
+  - "One-pass computation"
+  - "Streaming data analysis"
+  - "Co-moments"
+  - "covariance"
+  - "coskewness"
+  - "cokurtosis"
+  - "t-tests"
