@@ -22,7 +22,6 @@ preferred-citation:
   publisher: "IEEE"
   doi: "10.1109/BigData62323.2024.10825659"
   year: 2024
-  month: 12
   start: 123
   end: 129
   authors:
@@ -32,13 +31,13 @@ preferred-citation:
     - family-names: "Stupakov"
       given-names: "Ilya"
       affiliation: "Novosibirsk State Technical University"
-  keywords:
-    - "Statistical moments"
-    - "Numerical stability"
-    - "One-pass computation"
-    - "Streaming data analysis"
-    - "Co-moments"
-    - "t-tests"
-    - "covariance"
-    - "coskewness"
-    - "cokurtosis"
+keywords:
+  - "Statistical moments"
+  - "Numerical stability"
+  - "One-pass computation"
+  - "Streaming data analysis"
+  - "Co-moments"
+  - "t-tests"
+  - "covariance"
+  - "coskewness"
+  - "cokurtosis"
