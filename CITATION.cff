@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite our paper as below."
-title: "statmoments: A Python Library for Fast One-Pass Statistical Moments Computation"
+title: "statmoments: A Python Library for Fast One-Pass Statistical (Co-)Moments Computation"
 authors:
   - family-names: "Kochepasov"
     given-names: "Anton"
@@ -11,7 +11,7 @@ authors:
 url: "https://github.com/akochepasov/statmoments"
 preferred-citation:
   type: conference-paper
-  title: "Fast One-Pass Statistical Moments Computation for Large Datasets"
+  title: "An Efficient Single-pass Online Computation of Higher-Order Bivariate Statistics"
   collection-title: "2024 IEEE International Conference on Big Data (BigData)"
   collection-type: proceedings
   conference:
@@ -37,7 +37,7 @@ keywords:
   - "One-pass computation"
   - "Streaming data analysis"
   - "Co-moments"
-  - "t-tests"
   - "covariance"
   - "coskewness"
   - "cokurtosis"
+  - "t-tests"
