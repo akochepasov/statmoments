@@ -305,7 +305,6 @@ class _AccBase(ABC):
     self.classifiers_len = cl_len
     self.acc_min_count = kwargs.pop('acc_min_count', 10)
 
-  @staticmethod
   @abstractmethod
   def estimate_mem_size(tr_len, cl_len=1, moment=2):
     pass
