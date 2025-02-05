@@ -16,7 +16,7 @@ version = "1.1.1"
 description = "Streaming statistical moments"
 requires-python = ">=3.6"
 readme = {file = "README.md", content-type = "text/markdown"}
-license = {file = "LICENSE"}
+license = {text = "MIT"}  # Or your actual license type
 authors = [
     {name = "Anton Kochepasov"}
 ]
