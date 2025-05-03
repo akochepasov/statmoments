@@ -36,7 +36,7 @@ def chk_nvmath_installed(_USE_GPU):
     print("nvmath is installed and used")
     return True
   except ModuleNotFoundError:
-    print("Unable to use GPU: nvmath is not installed")
+    print("GPU support disabled: nvmath is not installed")
     return False
 
 USE_VTK = chk_vtk_installed(USE_VTK)
@@ -388,14 +388,17 @@ def _rmoms2cmoms2D_general(raw, ave, n, k, l, i, j):
   """Convert raw co-moments to central co-moments in a general fashion"""
   ave_i = ave[i]  # i is a scalar
   ave_j = ave[j]  # j is a slice such that indices (j, j) add diagonal!
-  com = (-1) ** (k + l) * (1 - k - l) * n * ave_i ** k * ave_j ** l
+
+  ave_i_expk = ave_i ** k
+  ave_j_expl = ave_j ** l
+  com = (-1) ** (k + l) * (1 - k - l) * n * ave_i_expk * ave_j_expl
 
   for p in range(2, k + 1):
     edge_val = raw[0, :, p - 2, :][i, i]
-    com += (-1) ** (k + l - p) * binom(k, p) * edge_val * ave_j ** l * ave_i ** (k - p)
+    com += (-1) ** (k + l - p) * binom(k, p) * edge_val * ave_j_expl * ave_i ** (k - p)
   for q in range(2, l + 1):
     edge_val = raw[0, :, q - 2, :][j, j].diagonal()
-    com += (-1) ** (k + l - q) * binom(l, q) * edge_val * ave_i ** k * ave_j ** (l - q)
+    com += (-1) ** (k + l - q) * binom(l, q) * edge_val * ave_i_expk * ave_j ** (l - q)
   for p in range(1, k + 1):
     for q in range(1, l + 1):
       Mpq = raw[p - 1, :, q - 1, :][i, j] if p <= q else raw[q - 1, :, p - 1, :][j, i]
