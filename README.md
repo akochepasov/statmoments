@@ -2,12 +2,12 @@
 
 Fast streaming univariate and bivariate moments and t-statistics.
 
-statmoments is a high-performance library for computing univariate and bivariate statistical moments in a single pass over large waveform datasets with thousands of sample points. It can produce Welch's t-test statistics for hypothesis testing on arbitrary data partitions.
+statmoments is a high-performance library for computing univariate and bivariate statistical moments in a single pass over large waveform datasets containing thousands of sample points with exceptional numerical accuracy. It supports both CPU and GPU processing and generates Welch's t-test statistics for hypothesis testing on arbitrary data partitions to enable robust statistical verification.
 
 ## Features
 
 - Streaming processing for both univariate and bivariate analysis
-- Efficient memory usage through dense matrix representation
+- Efficient memory usage through the dense matrix representation
 - High numerical accuracy
 - Command-line interface for analysis of existing datasets
 
@@ -121,7 +121,7 @@ statmoments uses top BLAS implementations, including GPU based on [nvmath-python
 
 Due to RAM limits, results are produced one at a time for each input classifier as the set of statistical moments. Each classifier's output moment has dimensions 2 x M x L, where M is an index of the requested classifier and L is the region length.
 
-The bivariate  results, co-moments and t-tests, are represented by the **upper triangle** of the symmetric matrix as 1D array for each classifier.
+The bivariate results, co-moments and t-tests, are represented by the **upper triangle** of the symmetric matrix as 1D array for each classifier.
 
 ## Installation
 
