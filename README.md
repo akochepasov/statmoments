@@ -13,7 +13,7 @@ statmoments is a high-performance library for computing univariate and bivariate
 
 ## How is it different?
 
-When input data differences are subtle, millions of waveforms may have to be processed to find the statistically significant difference, requiring efficient algorithms. In addition to that, the high-order moment computation need multiple passes and may require starting over once new data appear. With thousands of sample points per waveform, the problem becomes more complex.
+When input data differences are subtle, millions of waveforms may need to be processed to identify statistically significant differences, demanding efficient algorithms. High-order moment computations traditionally require multiple passes and may necessitate restarting analysis when new data arrives. With thousands of sample points per waveform, the computational complexity grows substantially, as these applications typically require millions to billions of data points because dependencies are often weak, masked by noise, or only apparent across large populations or extended time periods, making single-pass streaming algorithms essential for practical analysis.
 
 A streaming algorithm processes sequences of inputs in a single pass as they are collected. When fast enough, it's suitable for real-time sources like oscilloscopes, sensors, and financial markets, as well as for large datasets that don't fit in memory. The dense matrix representation of an intermediate accumulator reduces memory requirements. The accumulator can be converted to co-moments and Welch's t-test statistics on demand. Data batches can be iteratively processed to increase precision and then discarded. The library handles significant input streams, processing hundreds of megabytes per second.
 
@@ -23,7 +23,7 @@ Some of the benefits of streaming computation include:
 
 - Real-time insights for trend identification and anomaly detection
 - Reduced data processing latency, crucial for time-sensitive applications
-- Scalability to handle large data volumes, essential for data-intensive research in fields like astrophysics and financial analysis
+- Scalability to handle large data volumes, essential for data-intensive research in fields like particle physics, signal processing and side-channel analysis
 
 ## Numeric accuracy
 
