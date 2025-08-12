@@ -7,7 +7,7 @@ statmoments is a high-performance library for computing univariate and bivariate
 ## Features
 
 - Streaming processing for both univariate and bivariate analysis
-- Efficient memory usage through the dense matrix representation
+- Efficient memory usage through dense matrix representation
 - High numerical accuracy
 - Command-line interface for analysis of existing datasets
 
