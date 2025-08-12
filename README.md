@@ -147,8 +147,11 @@ Anton Kochepasov, Ilya Stupakov, "An Efficient Single-pass Online Computation of
 [![PyPi Version](https://img.shields.io/pypi/v/statmoments.svg?style=flat-square)](https://pypi.org/project/statmoments/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/statmoments.svg?style=flat-square)](https://pypi.org/project/statmoments/)
 [![GitHub License](https://img.shields.io/github/license/akochepasov/statmoments)](https://github.com/akochepasov/statmoments/blob/main/LICENSE)
+
+
 [![CI](https://github.com/akochepasov/statmoments/actions/workflows/python-package.yml/badge.svg)](https://github.com/akochepasov/statmoments/actions/workflows/python-package.yml)
+[![codecov](https://codecov.io/gh/akochepasov/statmoments/branch/master/graph/badge.svg)](https://codecov.io/gh/akochepasov/statmoments)
+
 
 [![numpy](https://img.shields.io/badge/numpy-required-blue?logo=numpy)](https://pypi.org/project/numpy/)
 [![scipy](https://img.shields.io/badge/scipy-required-blue?logo=scipy)](https://pypi.org/project/scipy/)
-
