@@ -150,7 +150,7 @@ Anton Kochepasov, Ilya Stupakov, "An Efficient Single-pass Online Computation of
 
 
 [![CI](https://github.com/akochepasov/statmoments/actions/workflows/python-package.yml/badge.svg)](https://github.com/akochepasov/statmoments/actions/workflows/python-package.yml)
-[![codecov](https://codecov.io/gh/akochepasov/statmoments/branch/master/graph/badge.svg)](https://codecov.io/gh/akochepasov/statmoments)
+[![codecov](https://codecov.io/gh/akochepasov/statmoments/branch/main/graph/badge.svg)](https://codecov.io/gh/akochepasov/statmoments)
 
 
 [![numpy](https://img.shields.io/badge/numpy-required-blue?logo=numpy)](https://pypi.org/project/numpy/)
