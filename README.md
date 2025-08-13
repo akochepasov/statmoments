@@ -119,9 +119,9 @@ More examples with specific details can be found in `examples` and `tests` direc
 
 statmoments uses top BLAS implementations, including GPU based on [nvmath-python](https://github.com/NVIDIA/nvmath-python) if available, for the best peformance on Windows, Linux and Macs, to maximize computational efficiency.
 
-Due to RAM limits, results are produced one at a time for each input classifier as the set of statistical moments. Each classifier's output moment has dimensions 2 x M x L, where M is an index of the requested classifier and L is the region length.
+Bivariate results -- co-moments and t-tests -- are represented by the **upper triangle** of the symmetric matrix as 1D array for each classifier.
 
-The bivariate results, co-moments and t-tests, are represented by the **upper triangle** of the symmetric matrix as 1D array for each classifier.
+Due to RAM limits, the results are produced one at a time for each input classifier as the set of statistical moments. Each classifier's output co-moment has dimensions 2 x C x L, where C is an index of the requested classifier, and L is the length of the flattened upper triangle.
 
 ## Installation
 
