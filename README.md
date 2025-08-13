@@ -37,7 +37,7 @@ The numeric accuracy of results depends on the coefficient of variation (COV) of
   # Input data parameters
   tr_count = 100   # M input waveforms
   tr_len   = 5     # N features or points in the input waveforms
-  cl_len   = 2     # L hypotheses how to split input waveforms
+  cl_len   = 2     # C hypotheses how to split input waveforms
 
   # Create engine, which can compute up to kurtosis
   uveng = statmoments.Univar(tr_len, cl_len, moment=4)
@@ -70,7 +70,7 @@ The numeric accuracy of results depends on the coefficient of variation (COV) of
   # Input data parameters
   tr_count = 100   # M input waveforms
   tr_len = 5       # N features or points in the input waveforms
-  cl_len = 2       # L hypotheses how to split input waveforms
+  cl_len = 2       # C hypotheses how to split input waveforms
 
   # Create bivariate engine, which can compute up to co-kurtosis
   bveng = statmoments.Bivar(tr_len, cl_len, moment=4)
