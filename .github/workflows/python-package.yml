@@ -40,9 +40,6 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
 
       - name: Cache pip
         uses: actions/cache@v3
@@ -68,14 +65,14 @@ jobs:
           retention-days: 1
 
   build-test-wheels:
-    name: ${{ matrix.python-version }} on ${{ matrix.os }}
+    name: Build wheels on ${{ matrix.os }} for ${{ matrix.python-version }}
     needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04, macOS-13, windows-2019]
-        python-version: ['3.6', '3.10', '3.12']
+        python-version: ["cp36", "cp310", "cp312"]
 
     steps:
       - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
@@ -89,8 +86,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
+          python-version: '3.10'  # For running cibuildwheel
 
       - name: Cache pip
         uses: actions/cache@v3
@@ -103,33 +99,25 @@ jobs:
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install cython build setuptools wheel
+          pip install cython build setuptools wheel cibuildwheel
 
-      - name: Build package ${{ matrix.os }} ${{ matrix.python-version }}
-        run: python -m build
+      - name: Build package with cibuildwheel
+        env:
+          CIBW_BUILD: ${{ matrix.python-version }}-*
+          CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_BEFORE_BUILD: pip install -r requirements.txt
+          CIBW_TEST_REQUIRES: pytest pytest-cov pytest-xdist coverage
+          CIBW_TEST_COMMAND: pytest {project}/tests --cov=statmoments
+        run: python -m cibuildwheel --output-dir wheelhouse
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: package-wheel-${{ matrix.os }}-py${{ matrix.python-version }}
-          path: dist/*.whl
+          name: package-wheel-${{ matrix.os }}-${{ matrix.python-version }}
+          path: wheelhouse/*.whl
           retention-days: 1
-
-      - name: Install test dependencies
-        run: |
-          # Build and test requirements
-          pip install flake8 pytest pytest-cov pytest-xdist coverage
-          # Main requirements
-          pip install -r requirements.txt
-
-      - name: Install main package as editable
-        run: |
-          pip install -e .
-
-      - name: Run tests and generate coverage report
-        run: |
-          pytest --durations=0 -n auto --dist loadfile --cov=statmoments .
-          coverage report -m
 
       - name: Generate and upload coverage to Codecov
         uses: codecov/codecov-action@v5
