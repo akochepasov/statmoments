@@ -113,11 +113,11 @@ python -m statmoments.univar -i data.h5 -m 3 -r 0:5000
 python -m statmoments.bivar -i data.h5 -r 0:1000
 ```
 
-More examples can be found in the examples and tests directories.
+More examples with specific details can be found in `examples` and `tests` directories.
 
 ## Implementation Notes
 
-statmoments uses top BLAS implementations, including GPU based on [nvmath-python](https://github.com/NVIDIA/nvmath-python) if available, for the best peformance on Windows, Linux and Macs,to maximize computational efficiency.
+statmoments uses top BLAS implementations, including GPU based on [nvmath-python](https://github.com/NVIDIA/nvmath-python) if available, for the best peformance on Windows, Linux and Macs, to maximize computational efficiency.
 
 Due to RAM limits, results are produced one at a time for each input classifier as the set of statistical moments. Each classifier's output moment has dimensions 2 x M x L, where M is an index of the requested classifier and L is the region length.
 
