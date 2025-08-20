@@ -90,7 +90,7 @@ def _ensure_mom(eng, traces0, traces1, normalized=True):
   amom = [_m[:, 0].copy() for _m in eng.moments(moments=[m])][0]  # Only one classifier
   nt.assert_allclose(emom, amom, err_msg='error in engine {} moment order {}'.format(eng._impl, m))
 
-  # Standartized moments
+  # Standardized moments
   for m in range(3, max_moment + 1):
     emom = [calc_mom(traces0, m, normalized), calc_mom(traces1, m, normalized)]
     amom = [_m[:, 0].copy() for _m in eng.moments(moments=m)][0]  # Only one classifier

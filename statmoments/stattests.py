@@ -47,11 +47,11 @@ def ttests(engine, moment=None, dim=None, equal_var=False):
   tmd = np.sum(test_mom)
   momgen = (None, engine.moments, engine.comoments)[test_dim]
 
-  # The standartization denominator (std** 2 = var)
+  # The standardization denominator (std** 2 = var)
   stddgen = engine.moments(2) if tmd > 2 else _repeat([1, 1])
 
   # Moments are standardized _not_ here, but later
-  # _preprocvar to save FLOPS on sqrt
+  # in _preprocvar to save FLOPS on sqrt
   for i, (cm, stdd) in enumerate(zip(momgen(mlist, False), stddgen)):
     n0, n1 = engine.counts(i)
     if min(n0, n1) < engine.acc_min_count:
@@ -70,7 +70,7 @@ def ttests(engine, moment=None, dim=None, equal_var=False):
         stdl, stdr = stdd
         stdd = [triu_flatten(np.outer(stdl ** lm, stdl ** rm)), triu_flatten(np.outer(stdr ** lm, stdr ** rm))]
 
-    # Convert to preprocessed variance and standartize
+    # Convert to preprocessed variance and standardize
     _preprocvar(cm[0], tmd, stdd[0])
     _preprocvar(cm[1], tmd, stdd[1])
 

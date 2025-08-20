@@ -387,7 +387,7 @@ def test_trivial_1d(trivial_traces, kernel1d):
   nt.assert_almost_equal(tt_exp1, tt_exp2)
   nt.assert_almost_equal(tt_exp1, tt_act)
 
-  # tt 3-4 ord, standartized
+  # tt 3-4 ord, standardized
   std = [np.sqrt(mm2[0]), np.sqrt(mm2[1])]
   for i in [3, 4]:
     sm20 = (mom_3pass(traces0, 2 * i) - mom_3pass(traces0, i) ** 2) / std[0] ** (2 * i)

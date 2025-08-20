@@ -6,17 +6,30 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: python-package-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install test dependencies
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+          cache: 'pip'
+
+      - name: Install lint dependencies
         run: |
           # Build and test requirements
           pip install --no-cache-dir flake8
@@ -31,7 +44,7 @@ jobs:
   build-sdist:
     name: Build sdist
     needs: lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
@@ -44,18 +57,10 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install cython build setuptools wheel
+          pip install numpy cython build setuptools wheel
 
       - name: Build package
         run: python -m build --sdist
@@ -74,8 +79,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macOS-13, windows-2019]
-        python-version: ['3.6', '3.10', '3.12']
+        os: [ubuntu-22.04, macOS-14, windows-2022]
+        python-version: ['3.8', '3.10', '3.12']
 
     steps:
       - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
@@ -92,18 +97,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
 
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install cython build setuptools wheel
+          pip install numpy cython build setuptools wheel
 
       - name: Build package ${{ matrix.os }} ${{ matrix.python-version }}
         run: python -m build
@@ -128,20 +125,21 @@ jobs:
 
       - name: Run tests and generate coverage report
         run: |
-          pytest --durations=0 -n auto --dist loadfile --cov=statmoments .
+          pytest --durations=0 -n auto --dist loadfile --cov=statmoments --cov-report=xml .
           coverage report -m
 
-      - name: Generate and upload coverage to Codecov
+      - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: unittests
           fail_ci_if_error: true
+          files: ./coverage.xml
 
   collect-artifacts:
     name: Collect all artifacts
     needs: [build-test-wheels, build-sdist]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Download all wheels
         uses: actions/download-artifact@v4

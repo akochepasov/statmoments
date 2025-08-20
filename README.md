@@ -50,7 +50,7 @@ The numeric accuracy of results depends on the coefficient of variation (COV) of
 
   # Get statistical moments
   mean       = [cm.copy() for cm in uveng.moments(moments=1)]  # E(X)
-  skeweness  = [cm.copy() for cm in uveng.moments(moments=3)]  # E(X^3)
+  skewness   = [cm.copy() for cm in uveng.moments(moments=3)]  # E(X^3)
 
   # Detect statistical differences in the first-order t-test
   for i, tt in enumerate(statmoments.stattests.ttests(uveng, moment=1)):
@@ -104,7 +104,7 @@ The numeric accuracy of results depends on the coefficient of variation (COV) of
 ### Performing data analysis from the command line
 
 ```shell
-# Find univariate t-test statistics of skeweness for the first
+# Find univariate t-test statistics of skewness for the first
 # 5000 waveform sample points, stored in a HDF5 dataset
 python -m statmoments.univar -i data.h5 -m 3 -r 0:5000
 
