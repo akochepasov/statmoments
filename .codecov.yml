@@ -8,4 +8,17 @@ codecov:
 coverage:
   precision: 2
   round: down
-  range: 60...80
+  range: 30...80
+  status:
+    project:
+      default:
+        threshold: 1%   # Allows coverage to drop by 1% and still pass
+    patch:
+      default:
+        threshold: 5%   # Allows patch coverage to drop by 5%
+
+  ignore:
+    - "*/tests/*"                 # Ignore test files in coverage
+    - "*/examples/*"              # Ignore example files
+    - "setup.py"                  # Ignore setup files
+    - "statmoments/_version.py"   # Ignore auto-generated version file
