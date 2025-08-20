@@ -102,16 +102,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy cython build setuptools wheel
 
-      - name: Build package ${{ matrix.os }} ${{ matrix.python-version }}
-        run: python -m build
-
-      - name: Upload wheel artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: package-wheel-${{ matrix.os }}-py${{ matrix.python-version }}
-          path: dist/*.whl
-          retention-days: 1
-
       - name: Install test dependencies
         run: |
           # Build and test requirements
@@ -141,28 +131,25 @@ jobs:
     needs: [build-test-wheels, build-sdist]
     runs-on: ubuntu-22.04
     steps:
-      - name: Download all wheels
+      - name: Download sdist
         uses: actions/download-artifact@v4
         with:
-          pattern: package-*
+          name: package-sdist
           path: all-artifacts
-          merge-multiple: true
 
       - name: List downloaded artifacts
         run: ls -R all-artifacts/
 
-      - name: Upload combined artifacts
+      - name: Upload sdist artifact
         uses: actions/upload-artifact@v4
         with:
-          name: all-artifacts
+          name: sdist-artifact
           path: |
-            all-artifacts/*.whl
             all-artifacts/*.tar.gz
           retention-days: 7
 
-      - name: Delete intermediate artifacts
+      - name: Delete intermediate artifact
         uses: geekyeggo/delete-artifact@v5
         with:
           name: |
-            package-wheel-*
             package-sdist
