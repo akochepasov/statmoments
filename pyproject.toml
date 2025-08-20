@@ -73,3 +73,21 @@ version = {attr = "statmoments._version.__version__"}
 #     "cupy-cuda12x",
 #     "nvmath-python"
 # ]
+
+[tool.cibuildwheel]
+# CPython only; skip musllinux for now
+build = "cp38-* cp39-* cp310-* cp311-* cp312-*"
+skip = "pp* *-musllinux_*"
+before-build = [
+    "python -m pip install -U pip setuptools wheel",
+    "python -m pip install cython numpy",
+]
+test-requires = [
+    "pytest",
+    "pytest-xdist",
+    "pytest-cov",
+    "numpy",
+    "scipy",
+    "h5py",
+]
+test-command = "pytest -q {project}/statmoments/tests"
