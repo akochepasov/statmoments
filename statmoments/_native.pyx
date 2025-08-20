@@ -564,7 +564,7 @@ class _bivar_sum_base(_AccBase):
     ma, min_cnt = self.moment, self.acc_min_count
     tr_len, cl_len = self.trace_len, self._accs.shape[0]
     # 2D stat should return a separate piece of memory to avoid buffer corruption
-    # while normalizing coskeweness and higher moments
+    # while normalizing coskewness and higher moments
     cm, buf = np.empty((2, maxm, tr_len), dtype=np.float64), self._buf
 
     for ii in range(cl_len):
@@ -855,7 +855,7 @@ class bivar_cntr(_AccBase):
     tr_len, cl_len = self.trace_len, self._accs2d.shape[0]
 
     # 2D stat should return a separate piece of memory to avoid buffer corruption
-    # while normalizing coskeweness and higher moments
+    # while normalizing coskewness and higher moments
     retm = np.empty((2, len(moments), tr_len), dtype=np.float64)
 
     for ii in range(cl_len):
@@ -981,7 +981,7 @@ class _BivarNpassBase(_AccBase):
     tr_len, cl_len = self.trace_len, self.classifiers_len
 
     # 2D stat should return a separate piece of memory to avoid buffer corruption
-    # while normalizing coskeweness and higher moments
+    # while normalizing coskewness and higher moments
     retm = np.empty((2, len(moments), tr_len), dtype=np.float64)
 
     for ii in range(cl_len):
@@ -1285,7 +1285,7 @@ class univar_sum(_AccBase):
 
     # TODO: slice cm up to maxm
     # Ensure that 2nd moment (variance) is in a separate piece of memory
-    # to avoid buffer corruption while normalizing skeweness and higher moments
+    # to avoid buffer corruption while normalizing skewness and higher moments
     cm, buf = self._retm, self._buf
     moments = [m - 1 for m in moments]
     nT, accT = self._accs[0, 0], self._accs[0, 1:].reshape(self._retm.shape[1:])
