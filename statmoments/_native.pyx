@@ -284,15 +284,10 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
 
 ################################ LOCAL HELPERS ################################
 @cython.cfunc
-@cython.locals(i=cython.Py_ssize_t, tr_len=cython.Py_ssize_t)
-def _block_index(i, tr_len):
-  j = slice(i, tr_len)
-
-  cython.declare(kfrom=cython.Py_ssize_t, kto=cython.Py_ssize_t)
-  kfrom = tr_len *       i - (i - 1) * i // 2
-  kto   = tr_len * (i + 1) - (i + 1) * i // 2
-  k = slice(kfrom, kto)
-  return j, k
+@cython.returns(cython.Py_ssize_t)
+@cython.locals(tr_len=cython.Py_ssize_t, kfrom=cython.Py_ssize_t, i=cython.Py_ssize_t)
+def _block_index(tr_len, kfrom, i):
+  return kfrom + tr_len - i
 
 
 ############################### COMMON CLASS ##################################
@@ -387,7 +382,7 @@ def _rmoms2cmoms1D(M, moment, tmpbuf):
 def _rmoms2cmoms2D_general(raw, ave, n, k, l, i, j):
   """Convert raw co-moments to central co-moments in a general fashion"""
   ave_i = ave[i]  # i is a scalar
-  ave_j = ave[j]  # j is a slice such that indices (j, j) add diagonal!
+  ave_j = ave[j]  # j is a slice such that indices (j, j) join at the diagonal!
   com = (-1) ** (k + l) * (1 - k - l) * n * ave_i ** k * ave_j ** l
 
   for p in range(2, k + 1):
@@ -413,7 +408,7 @@ def _rmoms2cmoms2D(raw, ave, n, lm, rm, i, j):
 
   inv_n = 1.0 / n
   ave_i = ave[i]  # i is a scalar
-  ave_j = ave[j]  # j is a slice such that indices (j, j) add the diagonal!
+  ave_j = ave[j]  # j is a slice such that indices (j, j) join at the diagonal!
 
   # Expressions for conversions raw moments to central moments in the
   # Horner representation auto-generated with sympy, group order (mu_j, mu_i)
@@ -586,6 +581,7 @@ class _bivar_sum_base(_AccBase):
           cm[_i, moments] = 0.0
           continue
 
+        inv_nn = 1.0 / nn
         raw = raw0 if _i == 0 else raw1
         acc = acc0 if _i == 0 else acc1
 
@@ -596,7 +592,7 @@ class _bivar_sum_base(_AccBase):
         for i in range(maxm - 1):
           cm[_i, i + 1] = raw[i // 2, :, i // 2 + i % 2, :].diagonal()
 
-        cm[_i] *= 1.0 / nn
+        cm[_i] *= inv_nn
 
         _rmoms2cmoms1D(cm[_i], maxm, buf)
 
@@ -608,6 +604,7 @@ class _bivar_sum_base(_AccBase):
       yield cm[:, moments]
 
   def _comoments(self, moments, normalize):
+    cython.declare(tr_len=cython.Py_ssize_t)
     retm = self._retm
     tr_len, cl_len = self.trace_len, self._accs.shape[0]
     ma, min_cnt = self.moment, self.acc_min_count
@@ -623,6 +620,8 @@ class _bivar_sum_base(_AccBase):
       raw0 = acc0[1:acc0.shape[0] - 0, 1:].reshape(ma, tr_len, ma, tr_len)
       raw1 = acc1[1:acc1.shape[0] - 1, 1:].reshape(ma, tr_len, ma, tr_len)
 
+      cython.declare(kfrom=cython.Py_ssize_t, kto=cython.Py_ssize_t)
+      cython.declare(i=cython.int, nn=cython.double, inv_nn=cython.double)
       for _i in range(2):
         nn = n0 if _i == 0 else n1
         if nn < min_cnt:
@@ -630,17 +629,22 @@ class _bivar_sum_base(_AccBase):
           continue
 
         # The left and the right degree of the product terms, e.g. xi^1 * xj^3
+        inv_nn = 1.0 / nn
         for jj, (lm, rm) in enumerate(zip(*moments)):
           raw = raw0 if _i == 0 else raw1
           acc = acc0 if _i == 0 else acc1
+          kfrom = 0
           for i in range(tr_len):
-            j, k = _block_index(i, tr_len)
-            m1 = 1.0 / nn * acc[0, 1: 1 + tr_len]
+            j = slice(i, tr_len)
+            kto = _block_index(tr_len, kfrom, i)
+            k = slice(kfrom, kto)
+            kfrom = kto
+            m1 = inv_nn * acc[0, 1: 1 + tr_len]
             retm[_i, jj, k] = _rmoms2cmoms2D(raw, m1, nn, lm, rm, i, j)
 
             if (lm + rm) >= 3 and normalize:
-              m2 = 1.0 / nn * raw[0, :, 0, :].diagonal()
-              m1 = 1.0 / nn * acc[0, 1: 1 + tr_len]
+              m2 = inv_nn * raw[0, :, 0, :].diagonal()
+              m1 = inv_nn * acc[0, 1: 1 + tr_len]
               sd = np.sqrt(m2 - m1 * m1)
               retm[_i, jj, k] /= sd[i] ** lm * sd[j] ** rm
 
@@ -700,12 +704,18 @@ def _triuflatten_gen(n):
     return tr2d[_ndx]
   return _triu
 
+def _block_index0(i, tr_len):
+  cython.declare(kfrom=cython.Py_ssize_t, kto=cython.Py_ssize_t)
+  kfrom = tr_len *       i - (i - 1) * i // 2
+  kto   = tr_len * (i + 1) - (i + 1) * i // 2
+  return slice(i, tr_len), slice(kfrom, kto)
+
 def _compute_by_rows(tr_len, f):
   # Compute by rows upper triangle part of matrix from function f
   # This function is required for optimized memory consumption
   com = np.empty(tr_len * (tr_len + 1) // 2, dtype=np.float64)
   for i in range(tr_len):
-    j, k = _block_index(i, tr_len)
+    j, k = _block_index0(i, tr_len)
     com[k] = f(i, j)
   return com
 
@@ -890,8 +900,9 @@ class bivar_cntr(_AccBase):
         if nn < min_cnt:
           retm[_i, :] = 0
           continue
+        inv_nn = 1.0 / nn
         for jj, (lm, rm) in enumerate(zip(*moments)):
-          C = _calc_comoments(1.0 / nn * accs2d[_i], lm, rm, normalize)
+          C = _calc_comoments(inv_nn * accs2d[_i], lm, rm, normalize)
           retm[_i, jj] = triuflatten(C)
       yield self._retm[:, :len(moments[0])]
 
@@ -995,6 +1006,7 @@ class _BivarNpassBase(_AccBase):
           retm[_i, :len(moments)] = 0.0
           continue
 
+        inv_nn = 1.0 / nn
         cm = retm[_i]
         tr_set = traces_cl[_i]
         raw = np.mean(tr_set, axis=0)
@@ -1003,10 +1015,10 @@ class _BivarNpassBase(_AccBase):
             cm[jj] = raw
           else:
             np.sum((tr_set - raw) ** m, axis=0, out=cm[jj])
-            dscal(1.0 / nn, cm[jj])
+            dscal(inv_nn, cm[jj])
             if m >= 3 and normalize:
               sd = np.sum((tr_set - raw) ** 2, axis=0)
-              dscal(1.0 / nn, sd)
+              dscal(inv_nn, sd)
               np.sqrt(sd, out=sd)
               cm[jj] /= sd ** m
 
