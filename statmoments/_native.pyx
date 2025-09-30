@@ -1413,30 +1413,31 @@ def _preprocvar(M, m, variance=None):
 @cython.cfunc
 @cython.returns('double[::1]')
 @cython.locals(n0=cython.int, n1=cython.int, m0='double[::1]', m1='double[::1]', v0='double[::1]', v1='double[::1]')
-def _ttest_ne(n0, n1, m0, m1, v0, v1):
-  """ Non-equal vars """
+def _ttest(n0, n1, m0, m1, v0, v1, veq):
   # This function modifies the buffers of given data
   # This _ttest adds about
   #   2-5% of CM time for ttest order 1
   # 0.8-1% of CM time for ttest order 2
   # Divide to (n-1) to compensate division to n in finding CMs
+  nom0 = cython.declare(cython.double, n0)
+  nom1 = cython.declare(cython.double, n1)
+  denom = cython.declare(cython.double, 1.0)
+
+  if veq:
+    # equal or similar variances
+    denom = (1.0 / n0 + 1.0 / n1) / (n0 + n1 - 2.0)
+  else:
+    # non-equal variances (Welch's)
+    nom0, nom1 = 1.0 / (n0 - 1), 1.0 / (n1 - 1)
+
   daxpy(m1, m0, -1.0)
-  dscal(1.0 / (n0 - 1), v0)
-  daxpy(v1, v0, 1.0 / (n1 - 1))
+  dscal(nom0 * denom, v0)
+  daxpy(v1, v0, nom1 * denom)
   return m0 / np.sqrt(v0)
 
-@cython.cfunc
-#@cython.locals(n0 = cython.int, n1 = cython.int, m0 = 'double[::1]', m1 = 'double[::1]', v0 = 'double[::1]', v1 = 'double[::1]')
-def _ttest_eq(n0, n1, m0, m1, v0, v1):
-  """ Equal vars """
-  # This function modifies the buffers of given data
-  denom = (1.0 / n0 + 1.0 / n1) / (n0 + n1 - 2.0)
-  daxpy(m1, m0, -1.0)
-  dscal(n0 * denom, v0)
-  daxpy(v1, v0, n1 * denom)
-  return m0 / np.sqrt(v0)
+
 
 def ttest(n0, n1, m10, m11, m20, m21, veq):
   """Compute t-test"""
 
-  return _ttest_ne(n0, n1, m10, m11, m20, m21) if not veq else _ttest_eq(n0, n1, m10, m11, m20, m21)
+  return _ttest(n0, n1, m10, m11, m20, m21, veq)
