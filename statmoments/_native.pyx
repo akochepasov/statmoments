@@ -304,9 +304,11 @@ class _AccBase(ABC):
   def estimate_mem_size(tr_len, cl_len=1, moment=2):
     pass
 
-  @abstractmethod
   def memory_size(self):
-    pass
+    mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
+    # ttest memory included in mem_class and one additional square for std normalization
+    mem_ttstd = 0  if self.moment < 3 else self.trace_len + self.trace_len ** 2
+    return mem_class + mem_ttstd * 8
 
   @abstractmethod
   def update(self, traces, classifiers):
@@ -495,18 +497,12 @@ class _bivar_sum_base(_AccBase):
     bufsz      = 3 * tr_len
     lytsz      = exp_traces * (moment * tr_len + 1)
     accssz     = cl_len * (moment * tr_len + 1) ** 2
-    ttsz       = 2 * 2 * tr_len * tr_len // 2
+    ttsz       = 3 * 2 * tr_len * tr_len // 2
     return (lytsz + accssz) * np.finfo(acc_dtype).bits // 8 + (bufsz + ttsz) * 8
-
-  def memory_size(self):
-    mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
-    # ttest memory included in mem_class or std normalization computed one line at a time
-    mem_ttest = 0  if self.moment < 3 else self.trace_len
-    return mem_class + mem_ttest * 8
 
   def update(self, traces, classifiers):
     moment, batch_cnt = self.moment, len(traces)
-    tr_len, cl_len = self.trace_len, self.classifiers_len
+    tr_len, cl_len = self.trace_len, len(classifiers[0])
 
     self.total_count += batch_cnt
 
@@ -805,12 +801,6 @@ class bivar_cntr(_AccBase):
     ttstdsz    = 0  if moment < 3 else tr_len + tr_len ** 2
     return (lytsz + accs1dsz + accs2dsz) * np.finfo(acc_dtype).bits // 8 + (ttsz + ttstdsz) * 8 + clssz * 4
 
-  def memory_size(self):
-    mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
-    # ttest memory included in mem_class or one additional square for std normalization
-    mem_ttest = 0  if self.moment < 3 else self.trace_len + self.trace_len ** 2
-    return mem_class + mem_ttest * 8
-
   def update(self, traces, classifiers):
     moment, batch_cnt = self.moment, len(traces)
     tr_len, cl_len = self.trace_len, len(classifiers[0])
@@ -971,10 +961,6 @@ class _BivarNpassBase(_AccBase):
     mem_class = tr_len * tr_len + 2 * 2 * tr_len * (tr_len + 1) // 2
     return mem_class * 8
 
-  def memory_size(self):
-    mem_class = sum(v.nbytes for v in vars(self).values() if isinstance(v, np.ndarray))
-    return mem_class
-
   def update(self, traces, classifiers):
     self.total_count += len(traces)
 
@@ -1033,12 +1019,6 @@ class bivar_2pass(_BivarNpassBase):
     mem_ttstd = 0  if moment < 3 else tr_len + tr_len ** 2
     return mem_base + mem_ttstd * 8
 
-  def memory_size(self):
-    mem_base = super().memory_size()
-    # One additional square for std normalization for moments > 2
-    mem_ttstd = 0  if self.moment < 3 else self.trace_len + self.trace_len ** 2
-    return mem_base + mem_ttstd * 8
-
   def _comoments(self, moments, normalize):
     min_cnt, C = self.acc_min_count, self._tmpsq
     tr_len, cl_len = self.trace_len, self.classifiers_len
@@ -1079,12 +1059,6 @@ class bivar_txtbk(_BivarNpassBase):
     mem_tri   = exp_traces * tr_len * (tr_len + 1) // 2
     mem_ttstd = 0  if moment < 3 else tr_len + tr_len ** 2
     return mem_base + (mem_tri  + mem_ttstd)* 8
-
-  def memory_size(self):
-    mem_base = super().memory_size()
-    # One additional square for std normalization for moments > 2
-    mem_ttstd = 0  if self.moment < 3 else self.trace_len + self.trace_len ** 2
-    return mem_base + mem_ttstd * 8
 
   def _realloc_tri(self, m):
     if len(self._tri) < m:
@@ -1400,12 +1374,15 @@ class univar_sum_detrend(univar_sum):
 #@cython.returns('double[:, ::1]')
 #@cython.locals(M = 'double[:, ::1]', m='int')
 def _preprocvar(M, m, variance=None):
+  if m == 1:
+    # Do nothing for m == 1
+    return M
+
+  M[1, :] = M[1] - M[0] ** 2
+
   if m > 2:
-    M[1][:] = (M[1] - M[0] ** 2) / variance
-    M[0][:] = M[0] / np.sqrt(variance)
-  elif m == 2:
-    M[1] = M[1] - M[0] ** 2
-    M[0] = M[0]
+    M[1, :] = M[1] / variance
+    M[0, :] = M[0] / np.sqrt(variance)
 
   # Do nothing for m == 1
   return M
@@ -1434,8 +1411,6 @@ def _ttest(n0, n1, m0, m1, v0, v1, veq):
   dscal(nom0 * denom, v0)
   daxpy(v1, v0, nom1 * denom)
   return m0 / np.sqrt(v0)
-
-
 
 def ttest(n0, n1, m10, m11, m20, m21, veq):
   """Compute t-test"""
