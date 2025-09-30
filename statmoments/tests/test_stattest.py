@@ -316,14 +316,14 @@ def test_nist(kernel1d):
   tr_len, cl_len, m = 1, 2, 1
   eng = statmoments.Univar(tr_len, cl_len, moment=2 * m, kernel=kernel1d)
 
-  eng.update(traces[0], [[0, 1]] * len(traces[0]))
-  eng.update(traces[1], [[1, 0]] * len(traces[1]))
+  eng.update(traces[0], [[0, 1]] * len(traces[0]))  # All traces[0] go as hypothesis 0 (then 1)
+  eng.update(traces[1], [[1, 0]] * len(traces[1]))  # All traces[1] go as hypothesis 1 (then 0)
 
   nt.assert_equal(list(eng.counts(0)), [249, 79])
   nt.assert_equal(list(eng.counts(1)), [79, 249])
 
   # Request both moments at once for both classifiers
-  allmoms = [m.copy() for m in eng.moments((1, 2))]
+  allmoms = [m.copy() for m in eng.moments((1, 2))]  # Request moments 1 and 2
 
   # Ensure means
   classifier, moment, rvar = 0, 0, 0
@@ -331,7 +331,7 @@ def test_nist(kernel1d):
   classifier, moment, rvar = 1, 0, 0
   nt.assert_allclose(allmoms[classifier][:, moment][:, rvar], [30.48101, 20.14458])
 
-  # Ensure standard deviations
+  # Verify standard deviations
   classifier, moment, rvar = 0, 1, 0
   nc = np.array(eng.counts(classifier))
   sd = np.sqrt(allmoms[classifier][:, moment][:, rvar] * nc / (nc - 1))
@@ -342,7 +342,7 @@ def test_nist(kernel1d):
   sd = np.sqrt(allmoms[classifier][:, moment][:, rvar] * nc / (nc - 1))
   nt.assert_almost_equal(sd, [6.10771, 6.41470], decimal=5)
 
-  # Ensure t-test
+  # Verify t-test for assumed equal and non-equal variances
   exptt_eq = ttest_ind(traces[0], traces[1], equal_var=True).statistic           # NIST
   alltt_eq = [tt.copy() for tt in statmoments.stattests.ttests(eng, equal_var=True)]
   nt.assert_almost_equal(exptt_eq, -12.62059, decimal=5)
@@ -365,13 +365,13 @@ def test_trivial_1d(trivial_traces, kernel1d):
   eng.update(traces0, ['0'] * n0)
   eng.update(traces1, ['1'] * n1)
 
-  # tt 1 ord
+  # t-test 1 order, means
   i = 1
   tt_exp = wttest(traces0, traces1)
   tt_act = next(statmoments.stattests.ttests(eng, moment=i)).copy()
   nt.assert_almost_equal(tt_exp, tt_act)
 
-  # tt 2 ord
+  # t-test 2 order, variances
   i = 2
   tt_act = next(statmoments.stattests.ttests(eng, moment=i)).copy()
 
@@ -387,7 +387,7 @@ def test_trivial_1d(trivial_traces, kernel1d):
   nt.assert_almost_equal(tt_exp1, tt_exp2)
   nt.assert_almost_equal(tt_exp1, tt_act)
 
-  # tt 3-4 ord, standardized
+  # t-tests 3-4 orders (skewness, kurtosis), standardized
   std = [np.sqrt(mm2[0]), np.sqrt(mm2[1])]
   for i in [3, 4]:
     sm20 = (mom_3pass(traces0, 2 * i) - mom_3pass(traces0, i) ** 2) / std[0] ** (2 * i)
@@ -412,13 +412,13 @@ def test_trivial_2d(trivial_traces, kernel2d):
   eng.update(traces0, ['0'] * n0)
   eng.update(traces1, ['1'] * n1)
 
-  # tt 1-1 ord
+  # t-test 1-1 orders
   m1, m2 = 1, 1
   tt_exp = wttest(uni2bivar(traces0, m1, m2), uni2bivar(traces1, m1, m2))
   tt_act = next(statmoments.stattests.ttests(eng, moment=m1)).copy()
   nt.assert_almost_equal(tt_exp, tt_act)
 
-  # tt 2-2 ord
+  # t-test 2-2 order
   m1, m2 = 2, 2
   std2d0 = np.var(traces0, axis=0, ddof=0)  # std ** 2 = var
   std2d1 = np.var(traces1, axis=0, ddof=0)  # std ** 2 = var
