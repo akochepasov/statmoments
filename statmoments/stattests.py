@@ -3,14 +3,29 @@ from itertools import repeat as _repeat
 
 import numpy as np
 
-from ._native_shim import ttest
+from ._native_shim import ttest as native_ttest
 from ._native import _preprocvar  # Is not imported otherwise
 
 from .common import triu_flatten
 
 
 def ttests(engine, moment=None, dim=None, equal_var=False):
-  """Return a generator yielding the independed samples Welch's t-test for each classifier"""
+  """Return a generator yielding the t-test for requested moment or each classifier
+
+    equal_var : bool, optional
+        If False (default) perform Welch's t-test, which does not assume equal
+        population variance [1]_.
+        If True, perform a standard independent 2 sample test
+        that assumes equal population variances [2]_.
+  For more details, see scipy.stats.ttest_ind
+
+  References
+  ----------
+  .. [1] https://en.wikipedia.org/wiki/Welch%27s_t-test
+
+  .. [2] https://en.wikipedia.org/wiki/T-test#Independent_two-sample_t-test
+
+  """
 
   test_dim = dim    if dim    is not None else engine.dim
   test_mom = moment if moment is not None else engine.moment // 2
@@ -76,4 +91,4 @@ def ttests(engine, moment=None, dim=None, equal_var=False):
 
     m10, m20 = cm[0]
     m11, m21 = cm[1]
-    yield ttest(n0, n1, m10, m11, m20, m21, equal_var)
+    yield native_ttest(n0, n1, m10, m11, m20, m21, equal_var)
