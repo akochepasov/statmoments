@@ -4,7 +4,8 @@ dynamic = ["version"]
 description = "Fast streaming single-pass univariate/bivariate statistics and t-test"
 requires-python = ">=3.8"
 readme = {file = "README.md", content-type = "text/markdown"}
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "Anton Kochepasov", email = "akss@me.com"}
 ]
@@ -104,6 +105,19 @@ version = {attr = "statmoments._version.__version__"}
 
 [tool.setuptools.package-data]
 statmoments = ["*.pyx", "*.pxd", "*.pyxbld", "GIT_VERSION.txt"]
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["statmoments*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "statmoments._version.__version__"}
+
+[tool.setuptools.package-data]
+statmoments = ["*.pyx", "*.pxd", "*.pyd", "*.so", "GIT_VERSION.txt"]
 
 # Tool configurations
 
