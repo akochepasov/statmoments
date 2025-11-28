@@ -6,12 +6,6 @@ assert not (use_debug and use_pyrex), "Flags use_debug and use_pyrex cannot be T
 
 if use_pyrex:
   import pyximport
-
-  # TODO: Adding CUDA
-  # from pyximport import pyxbuild
-  # from setup import build_ext_cupy
-  # pyxbuild.build_ext = build_ext_cupy
-
   import numpy as np
 
   pyximport.install(setup_args={

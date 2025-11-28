@@ -1,24 +1,13 @@
-[build-system]
-requires = [
-    "setuptools>=45",
-    "wheel",
-    "cython",
-    "numpy>=1.17,<2",
-    "scipy<=1.15",
-    # "cupy-cuda12x",  # Optional CUDA support
-    # "nvmath-python"  # Optional CUDA support
-]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "statmoments"
-version = "1.1.1"
-description = "Streaming univariate and bivariate statistical moments"
-requires-python = ">=3.6"
+dynamic = ["version"]
+description = "Fast streaming single-pass univariate/bivariate statistics and t-test"
+requires-python = ">=3.8"
 readme = {file = "README.md", content-type = "text/markdown"}
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
-    {name = "Anton Kochepasov"}
+    {name = "Anton Kochepasov", email = "akss@me.com"}
 ]
 keywords = [
     "data-science",
@@ -26,10 +15,10 @@ keywords = [
     "bivariate",
     "skewness",
     "kurtosis",
+    "coskewness",
+    "cokurtosis",
     "statistics",
     "streaming",
-    "numpy",
-    "vectorization"
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -37,13 +26,10 @@ classifiers = [
     "Intended Audience :: Education",
     "Intended Audience :: Financial and Insurance Industry",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Cython",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -60,24 +46,77 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Social Science",
 ]
+
+# Core runtime dependencies
 dependencies = [
     "numpy>=1.17,<2",
     "scipy<=1.15",
     "h5py",
     "psutil",
-    "cython",
-    # "pywin32;platform_system=='Windows'"
 ]
 
-[tool.setuptools.dynamic]
-version = {attr = "statmoments._version.__version__"}
+[build-system]
+requires = [
+    "setuptools>=45",
+    "wheel",
+    "cython",
+    "numpy>=1.17,<2",
+    "scipy<=1.15",
+]
+
+build-backend = "setuptools.build_meta"
+
+[project.optional-dependencies]
+cuda = [
+    "cupy-cuda12x",
+    "nvmath-python"
+]
+
+# Development dependencies
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+    "statmoments[cuda]",
+    "Cython>=0.29",
+    "build",
+    "wheel",
+]
 
 [project.urls]
 "Source Code" = "https://github.com/akochepasov/statmoments/"
 "Issues" = "https://github.com/akochepasov/statmoments/issues"
 
-# [project.optional-dependencies]
-# cuda = [
-#     "cupy-cuda12x",
-#     "nvmath-python"
-# ]
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["statmoments*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "statmoments._version.__version__"}
+
+[tool.setuptools.package-data]
+statmoments = ["*.pyx", "*.pxd", "*.pyd", "*.so", "GIT_VERSION.txt"]
+
+# Tool configurations
+
+[tool.pytest.ini_options]
+testpaths = ["statmoments/tests"]
+python_files = ["test_*.py"]
+addopts = "-v"
+# To run with coverage: pytest --cov=statmoments --cov-report=term-missing
+
+[tool.coverage.run]
+source = ["statmoments"]
+omit = ["*/tests/*", "*/benchmark/*", "*/examples/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

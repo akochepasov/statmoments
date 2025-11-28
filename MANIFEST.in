@@ -1,0 +1,24 @@
+# Package metadata
+include LICENSE
+include README.md
+include CITATION.cff
+include pyproject.toml
+include setup.cfg
+include setup.py
+
+# Source distributions
+recursive-include statmoments *.pyx *.pxd *.pyxbld *.c *.pxi *.txt
+
+# Binary distributions
+recursive-include statmoments *.so *.pyd
+
+# Tests and benchmarks
+recursive-include statmoments/tests *.py
+recursive-include statmoments/benchmark *.py
+
+# Exclude examples
+prune examples
+
+# Exclude Python cache files
+global-exclude __pycache__/*
+global-exclude *.py[cod]
