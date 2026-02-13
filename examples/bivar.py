@@ -13,18 +13,30 @@ def bivar_ttest():
 
   # Input data
   traces0 = np.random.normal(0, 10, (tr_count, tr_len)).astype(np.int8)
-  traces1 = np.random.normal(0, 10, (tr_count, tr_len)).astype(np.int8)
-  # Insert correlation in one batch for some points for some splits
+  # Insert correlation for sample points 0-1 for the full batch
   traces0[:,   0] = (2 * traces0[:,   1]   + 10).astype(np.int8)
+  # and for interlaced waveforms, sample points 2-3
   traces0[::2, 2] = (3 * traces0[::2, 3]/2 + 20).astype(np.int8)
-  traces1[::2, 2] = (3 * traces1[::2, 3]/2 + 20).astype(np.int8)
 
   # Generate sorting classification (data partitioning hypotheses)
+  # 0: the input batch belongs to dataset 0
+  # 1: the input batch belongs to dataset 1
+  # 2: data interlaced from 0
+  # 3: data interlaced from 1
   cl0 = [[0, 1, i % 2, (i+1) % 2] for i in range(len(traces0))]
-  cl1 = [[1, 0, i % 2, (i+1) % 2] for i in range(len(traces1))]
 
   # Process input
   bveng.update(traces0, cl0)
+
+  traces1 = np.random.normal(0, 10, (tr_count, tr_len)).astype(np.int8)
+  # Insert correlation for interlaces waveforms, sample points 2-3
+  traces1[::2, 2] = (3 * traces1[::2, 3]/2 + 20).astype(np.int8)
+  # Generate sorting classification (data partitioning hypotheses)
+  # 0: the input batch belongs to dataset 1
+  # 1: the input batch belongs to dataset 0
+  # 2: data interlaced from 0
+  # 3: data interlaced from 1
+  cl1 = [[1, 0, i % 2, (i+1) % 2] for i in range(len(traces1))]
   bveng.update(traces1, cl1)
 
   # All generator returned data must be copied out
