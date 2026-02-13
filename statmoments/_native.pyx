@@ -1391,7 +1391,9 @@ def _preprocvar(M, m, variance=None):
 
 @cython.cfunc
 @cython.returns('double[::1]')
-@cython.locals(n0=cython.int, n1=cython.int, m0='double[::1]', m1='double[::1]', v0='double[::1]', v1='double[::1]')
+@cython.locals(n0=cython.int, n1=cython.int)
+@cython.locals(m0='double[::1]', m1='double[::1]', v0='double[::1]', v1='double[::1]')
+@cython.locals(veq='int')
 def _ttest(n0, n1, m0, m1, v0, v1, veq):
   # This function modifies the buffers of given data
   # This _ttest adds about
