@@ -26,7 +26,7 @@ def make_hypotheses(hlen):
   return bytes2classifiers(_urandom((hlen + 7) // 8))[:hlen]
 
 
-class engine_factory(object):
+class EngineFactory(object):
   def __init__(self, make_trace, make_classifiers, factory, **options):
     self._gen_trace = make_trace
     self._gen_classifiers = make_classifiers
@@ -37,7 +37,7 @@ class engine_factory(object):
     blk_sz = 8
     traces = np.empty((tr_count // blk_sz * blk_sz, tr_len))
     traces[:len(traces) // blk_sz, :] = self._gen_trace((len(traces) // blk_sz, tr_len))
-    traces.reshape(blk_sz, -1, tr_len)[:] = traces[:len(traces)//blk_sz]
+    traces.reshape(blk_sz, -1, tr_len)[:] = traces[:len(traces) // blk_sz]
     traces = np.random.permutation(traces)
     classifiers = [self._gen_classifiers(cl_len) for _ in range(len(traces))]
     return traces, classifiers
@@ -52,31 +52,32 @@ def benchmark(benchset):
 # Name        Implementation                     MB  tr_cnt   tr_len  cl_cnt   tr/sec   time res_time
 # bivar_m1    bivar_vtk(m(1, 1))                 50    5000      500       1      725    6.9      0.0
 # bivar_m1    bivar_vtk(m(1, 1))                124    5000     1000       1      132   37.7      0.0
-  print('{:12}{:30}{:>7}{:>8}{:>9}{:>8}{:>8}{:>7}{:>9}'.format(
-        'Kernel', 'Implementation', 'MB', 'tr_cnt', 'tr_len', 'cl_cnt', 'tr/sec', 'time', 'res_time'))
+  print('{:12}{:30}{:>7}{:>8}{:>9}{:>8}{:>8}{:>9}{:>9}'.format(
+        'Kernel', 'Implementation', 'MB', 'tr_cnt', 'tr_len', 'cl_cnt', 'tr/sec', 'upd_time', 'res_time'))
 
   for name, params in benchset:
-    for fctr, tr_count, tr_len, cl_count in product(*params):
-      tproc, ttest = [], []
+    for engine_factory, tr_count, tr_len, cl_count in product(*params):
+      update_times, ttest_times = [], []
+      assert repeat > 0
       for _ in range(repeat):
         # Garbage collect memory after the prev iteration to free the existing memory
         traces, engine = None, None
-        traces, classifiers = fctr.create_data(tr_count, tr_len, cl_count)
-        engine = fctr.create_engine(tr_len, cl_count)
+        traces, classifiers = engine_factory.create_data(tr_count, tr_len, cl_count)
+        engine = engine_factory.create_engine(tr_len, cl_count)
         for _ in range(number):
           start = timer()
           engine.update(traces, classifiers)  # Streaming: layout and accumulator
-          tproc.append(timer() - start)
+          update_times.append(timer() - start)
 
           start = timer()
-          for _ in ttests(engine):           # On-demand: t-tests
-            _ = None
-          ttest.append(timer() - start)
+          for _ in ttests(engine):  # On-demand: t-tests
+            pass
+          ttest_times.append(timer() - start)
 
-      mproc, mtt = min(tproc), min(ttest)
-      max_mom = ''.join(map(str, [engine.moment]*2))
+      min_update, min_tt = min(update_times), min(ttest_times)
+      max_mom = ''.join(map(str, [engine.moment] * 2))
       kname = '{}(m{})'.format(type(engine._impl).__name__, max_mom)
-      print("{:12}{:30}{:7d}{:8d}{:9d}{:8d}{:>8d}{:>7.1f}{:>9.1f}".format(
+      print("{:12}{:30}{:7d}{:8d}{:9d}{:8d}{:>8d}{:>9.1f}{:>9.1f}".format(
           name, kname, engine.memory_size >> 20, tr_count, tr_len, cl_count,
-          int(tr_count / mproc), mproc, mtt))
+          int(tr_count / min_update), min_update, min_tt))
   print()

@@ -15,7 +15,7 @@ def ttests(engine, moment=None, dim=None, equal_var=False):
   test_dim = dim    if dim    is not None else engine.dim
   test_mom = moment if moment is not None else engine.moment // 2
 
-  if engine.moment // 2 < np.max(test_mom):
+  if engine.moment < 2 or engine.moment // 2 < np.max(test_mom):
     raise ValueError("The engine cannot provide required statistical moments.")
 
   mom_conv = [
@@ -55,7 +55,7 @@ def ttests(engine, moment=None, dim=None, equal_var=False):
     n0, n1 = engine.counts(i)
     if min(n0, n1) < engine.acc_min_count:
       tr_len = engine.trace_len
-      tr_len = [tr_len, tr_len * (tr_len + 1) // 2][test_dim-1]
+      tr_len = [tr_len, tr_len * (tr_len + 1) // 2][test_dim - 1]
       yield np.zeros(tr_len)
       continue
 
@@ -66,7 +66,8 @@ def ttests(engine, moment=None, dim=None, equal_var=False):
         stdd = stdd ** test_mom
       elif test_dim == 2:
         lm, rm = test_mom
-        stdd = [triu_flatten(np.outer(stdd[0] ** lm, stdd[0] ** rm)), triu_flatten(np.outer(stdd[1] ** lm, stdd[1] ** rm))]
+        stdl, stdr = stdd
+        stdd = [triu_flatten(np.outer(stdl ** lm, stdl ** rm)), triu_flatten(np.outer(stdr ** lm, stdr ** rm))]
 
     # Convert to preprocessed variance and standartize
     _preprocvar(cm[0], tmd, stdd[0])
