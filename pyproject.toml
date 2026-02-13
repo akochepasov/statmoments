@@ -67,7 +67,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project.optional-dependencies]
-cuda = [
+gpu = [
     "cupy-cuda12x",
     "nvmath-python"
 ]
@@ -77,7 +77,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-xdist",
-    "statmoments[cuda]",
+    "statmoments[gpu]",
     "Cython>=0.29",
     "build",
     "wheel",
