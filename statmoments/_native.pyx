@@ -385,14 +385,17 @@ def _rmoms2cmoms2D_general(raw, ave, n, k, l, i, j):
   """Convert raw co-moments to central co-moments in a general fashion"""
   ave_i = ave[i]  # i is a scalar
   ave_j = ave[j]  # j is a slice such that indices (j, j) join at the diagonal!
+
   com = (-1) ** (k + l) * (1 - k - l) * n * ave_i ** k * ave_j ** l
 
   for p in range(2, k + 1):
     edge_val = raw[0, :, p - 2, :][i, i]
     com += (-1) ** (k + l - p) * binom(k, p) * edge_val * ave_j ** l * ave_i ** (k - p)
+
   for q in range(2, l + 1):
     edge_val = raw[0, :, q - 2, :][j, j].diagonal()
     com += (-1) ** (k + l - q) * binom(l, q) * edge_val * ave_i ** k * ave_j ** (l - q)
+
   for p in range(1, k + 1):
     for q in range(1, l + 1):
       Mpq = raw[p - 1, :, q - 1, :][i, j] if p <= q else raw[q - 1, :, p - 1, :][j, i]
@@ -1378,13 +1381,12 @@ def _preprocvar(M, m, variance=None):
     # Do nothing for m == 1
     return M
 
-  M[1, :] = M[1] - M[0] ** 2
-
+  # M[1, :] = M[1] - M[0] ** 2
+  dsbmv(M[0], M[0], M[1], -1.0, 1.0)
   if m > 2:
     M[1, :] = M[1] / variance
     M[0, :] = M[0] / np.sqrt(variance)
 
-  # Do nothing for m == 1
   return M
 
 @cython.cfunc
@@ -1395,11 +1397,11 @@ def _ttest(n0, n1, m0, m1, v0, v1, veq):
   # This _ttest adds about
   #   2-5% of CM time for ttest order 1
   # 0.8-1% of CM time for ttest order 2
-  # Divide to (n-1) to compensate division to n in finding CMs
   nom0 = cython.declare(cython.double, n0)
   nom1 = cython.declare(cython.double, n1)
   denom = cython.declare(cython.double, 1.0)
 
+  # Divide to (n-1) to compensate division to n in finding CMs
   if veq:
     # equal or similar variances
     denom = (1.0 / n0 + 1.0 / n1) / (n0 + n1 - 2.0)
@@ -1414,5 +1416,4 @@ def _ttest(n0, n1, m0, m1, v0, v1, veq):
 
 def ttest(n0, n1, m10, m11, m20, m21, veq):
   """Compute t-test"""
-
   return _ttest(n0, n1, m10, m11, m20, m21, veq)
