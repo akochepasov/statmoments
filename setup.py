@@ -3,7 +3,7 @@
 import os
 import sys
 import setuptools
-#import subprocess
+# import subprocess
 
 from Cython.Build import cythonize
 import Cython.Distutils.extension as cython_extension
@@ -57,14 +57,14 @@ def make_ext(modname, filename):
   return ext
 
 
-def store_git_hash():
-  try:
-    commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip().decode("utf-8")
-  except subprocess.CalledProcessError:
-    return False
-  with open("statmoments/GIT_VERSION.txt", "w") as h:
-    h.write(commit_hash + "\n")
-  return True
+# def store_git_hash():
+#   try:
+#     commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip().decode("utf-8")
+#   except subprocess.CalledProcessError:
+#     return False
+#   with open("statmoments/GIT_VERSION.txt", "w") as h:
+#     h.write(commit_hash + "\n")
+#   return True
 
 def build_extensions():
   # if store_git_hash():
