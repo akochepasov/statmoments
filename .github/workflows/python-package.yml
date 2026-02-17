@@ -79,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macOS-14, windows-2022]
+        os: [macOS-14, windows-2022]
         python-version: ['3.8', '3.10', '3.12']
 
     steps:
@@ -162,6 +162,8 @@ jobs:
           CIBW_BUILD: cp38-* cp310-* cp312-*
           CIBW_ARCHS_LINUX: x86_64
           CIBW_BEFORE_BUILD: pip install --upgrade pip && pip install numpy cython build setuptools wheel
+          CIBW_TEST_REQUIRES: pytest numpy scipy h5py
+          CIBW_TEST_COMMAND: python -c "import statmoments, numpy as np; import statmoments.univar as uv; uv.Univar(4,2,moment=2); print('smoke ok')"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
         run: |
           python -m cibuildwheel --platform linux --output-dir dist
