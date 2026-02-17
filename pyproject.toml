@@ -4,7 +4,8 @@ dynamic = ["version"]
 description = "Fast streaming single-pass univariate/bivariate statistics and t-test"
 requires-python = ">=3.8"
 readme = {file = "README.md", content-type = "text/markdown"}
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "Anton Kochepasov", email = "akss@me.com"}
 ]
@@ -56,7 +57,7 @@ dependencies = [
 
 [build-system]
 requires = [
-    "setuptools>=45",
+    "setuptools>=77",
     "wheel",
     "cython",
     "numpy>=1.17,<2",
@@ -88,7 +89,6 @@ dev = [
 
 [tool.setuptools]
 zip-safe = false
-license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 where = ["."]
