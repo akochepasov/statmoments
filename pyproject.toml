@@ -50,8 +50,8 @@ classifiers = [
 dependencies = [
     "numpy>=1.17,<2",
     "scipy<=1.15",
-    "h5py",
-    "psutil",
+    "h5py<=3.11",
+    "psutil<=5.9",
 ]
 
 [build-system]
