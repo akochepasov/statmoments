@@ -3,7 +3,7 @@
 import os
 import sys
 import setuptools
-#import subprocess
+import subprocess
 
 from Cython.Build import cythonize
 import Cython.Distutils.extension as cython_extension
