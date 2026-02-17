@@ -79,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macOS-14, windows-2022]
+        os: [macOS-14, windows-2022]
         python-version: ['3.8', '3.10', '3.12']
 
     steps:
@@ -136,9 +136,48 @@ jobs:
           fail_ci_if_error: true
           files: ./coverage.xml
 
+  build-linux-manylinux-wheels:
+    name: Build manylinux wheels (Linux x86_64)
+    needs: lint
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install --upgrade pip
+          pip install cibuildwheel
+
+      - name: Build manylinux wheels
+        env:
+          CIBW_BUILD: cp38-manylinux_x86_64 cp310-manylinux_x86_64 cp312-manylinux_x86_64
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_BEFORE_BUILD: pip install --upgrade pip && pip install numpy cython build setuptools wheel
+          CIBW_TEST_REQUIRES: pytest numpy scipy
+          CIBW_TEST_COMMAND: python -c "import statmoments, numpy as np; import statmoments.univar as uv; uv.Univar(4,2,moment=2); print('smoke ok')"
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+        run: |
+          python -m cibuildwheel --platform linux --output-dir dist
+
+      - name: Upload linux wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-wheel-linux-manylinux
+          path: dist/*.whl
+          retention-days: 7
+
   collect-artifacts:
     name: Collect all artifacts
-    needs: [build-test-wheels, build-sdist]
+    needs: [build-test-wheels, build-sdist, build-linux-manylinux-wheels]
     runs-on: ubuntu-22.04
     steps:
       - name: Download all wheels

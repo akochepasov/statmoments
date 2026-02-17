@@ -1,5 +1,6 @@
+# DEPRECATED: This file is maintained for backwards compatibility only.
 h5py
-numpy
-scipy
+numpy>=1.17,<2
+scipy<=1.15
 psutil
-cython
+cython>=0.29

@@ -3,17 +3,12 @@
 import os
 import sys
 import setuptools
-import subprocess
+# import subprocess
 
 from Cython.Build import cythonize
 import Cython.Distutils.extension as cython_extension
 
 
-if sys.version_info < (3, 6, 0):
-  # It should work even with 2.7, just never really tested
-  raise RuntimeError("statmoments requires Python 3.6 or later")
-
-kwargs = {}
 basedir = os.path.abspath(os.path.dirname(__file__))
 USE_CYTHON = os.path.isfile(os.path.join(basedir, "statmoments/_native.pyx"))
 
@@ -31,13 +26,13 @@ try:
       'CUPY_USE_CUDA_PYTHON': 0,
       'USE_CUPY_CUDA': USE_CUPY_CUDA
   }
-  print("nvmath found and used")
+  print("GPU support: detected nvmath-python and cupy, enabling CUDA compilation")
 except ModuleNotFoundError:
   print("Unable to use GPU: nvmath is not installed")
 
 
 def make_ext(modname, filename):
-  # This function required for in-place pyximport compilation over pyxbld
+  # This function required for both in-place pyximport compilation and for setup.py builds.
   compile_args, link_args = [], []
 
   if False:
@@ -52,51 +47,37 @@ def make_ext(modname, filename):
     # link_args.extend(['/DEBUG'])        # Output PDB in link time
     pass
 
- # Always rebuild. TODO: delete force later
   ext = cython_extension.Extension(modname, [filename],
                                    extra_compile_args=compile_args,
                                    extra_link_args=link_args,
                                    cython_compile_time_env=_cythonize_env,
-                                   # cython_gdb = True,
-                                   # force = True # always rebuild
+                                   # cython_gdb = True,  # Debugging
+                                   # force = True  # Always rebuild
                                    )
   return ext
 
 
-def get_version():
-  _version_dict = {}
-  version_path = os.path.join(basedir, 'statmoments/_version.py')
-  with open(version_path) as h:
-    exec(h.read(), None, _version_dict)
-  return _version_dict['__version__']
+# def store_git_hash():
+#   try:
+#     commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip().decode("utf-8")
+#   except subprocess.CalledProcessError:
+#     return False
+#   with open("statmoments/GIT_VERSION.txt", "w") as h:
+#     h.write(commit_hash + "\n")
+#   return True
 
-
-def store_git_hash():
-  try:
-    commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).rstrip().decode("utf-8")
-  except subprocess.CalledProcessError:
-    return False
-  with open("statmoments/GIT_VERSION.txt", "w") as h:
-    h.write(commit_hash + "\n")
-  return True
-
-
-def main():
+def build_extensions():
   # if store_git_hash():
   #   kwargs["package_data"] = {"statmoments": ["GIT_VERSION.txt"]}
-
   extensions = []
   if USE_CYTHON:
     # Cythonize
     extensions = cythonize('statmoments/_native.pyx', compile_time_env=_cythonize_env)
   else:
-    # Compile c code
+    # Compile C code
     extensions = [make_ext("statmoments._native", 'statmoments/_native.c')]
-  setuptools.setup(
-      version=get_version(),
-      ext_modules=extensions,
-      **kwargs)
+  return extensions
 
 
 if __name__ == '__main__':
-  main()
+  setuptools.setup(ext_modules=build_extensions())

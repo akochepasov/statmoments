@@ -126,9 +126,14 @@ Due to RAM limits, the results are produced one at a time for each input classif
 
 ## Installation
 
-```shell
-pip install statmoments
-```
+- CPU only (default):
+  ```shell
+  pip install statmoments
+  ```
+- Optional NVIDIA Math support:
+  ```shell
+  pip install "statmoments[gpu]"
+  ```
 
 ## References
 
