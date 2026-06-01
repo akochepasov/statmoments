@@ -126,11 +126,18 @@ Due to RAM limits, the results are produced one at a time for each input classif
 
 ## Installation
 
-```shell
-pip install statmoments
-```
+- CPU only (default):
+  ```shell
+  pip install statmoments
+  ```
+- Optional NVIDIA GPU acceleration:
+  ```shell
+  pip install "statmoments[gpu]"
+  ```
 
-## References
+## Citation
+
+If you use this software in academic work, please cite our conference paper.
 
 Anton Kochepasov, Ilya Stupakov, "An Efficient Single-pass Online Computation of Higher-Order Bivariate Statistics", 2024 IEEE International Conference on Big Data (BigData), 2024, pp. 123-129, [IEEE Xplore](https://ieeexplore.ieee.org/abstract/document/10825659).
 
