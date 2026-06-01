@@ -1,6 +1,9 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite our paper as below."
+type: software
+message: "If you use this software, please cite our paper as follows."
 title: "statmoments: A Python Library for Fast One-Pass Statistical (Co-)Moments Computation"
+repository-code: "https://github.com/akochepasov/statmoments"
+url: "https://github.com/akochepasov/statmoments"
 authors:
   - family-names: "Kochepasov"
     given-names: "Anton"
@@ -8,7 +11,6 @@ authors:
   - family-names: "Stupakov"
     given-names: "Ilya"
     affiliation: "Novosibirsk State Technical University"
-url: "https://github.com/akochepasov/statmoments"
 preferred-citation:
   type: conference-paper
   title: "An Efficient Single-pass Online Computation of Higher-Order Bivariate Statistics"
