@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 import os
-import sys
 import setuptools
 import subprocess
 
 from Cython.Build import cythonize
-import Cython.Distutils.extension as cython_extension
+
+from statmoments._build_config import get_cython_compile_time_env, make_ext
 
 
 if sys.version_info < (3, 8, 0):
