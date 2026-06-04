@@ -124,14 +124,9 @@ jobs:
 
       - name: Install built wheel
         shell: pwsh
-        run: pip install (Get-ChildItem -Path dist -Filter *.whl | Select-Object -First 1).FullName
-
-      - name: Install test dependencies
         run: |
-          # Build and test requirements
-          pip install flake8 pytest pytest-cov pytest-xdist coverage
-          # Main requirements
-          pip install -r requirements.txt
+          $wheel = (Get-ChildItem -Path dist -Filter *.whl | Select-Object -First 1).FullName
+          pip install "${wheel}[test]"
 
       - name: Run tests on installed wheel
         shell: pwsh
