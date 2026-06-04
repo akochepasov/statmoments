@@ -70,7 +70,20 @@ jobs:
 
       - name: Smoke test sdist install
         run: |
-          python -c "import statmoments; import statmoments.univar as uv; uv.Univar(4, 2, moment=2); print('sdist smoke ok')"
+          python - << 'PY'
+          import os
+          import tempfile
+
+          # Avoid importing the checked-out source tree from the repo root.
+          os.chdir(tempfile.gettempdir())
+
+          import statmoments
+          import statmoments.univar as uv
+
+          print(statmoments.__file__)
+          uv.Univar(4, 2, moment=2)
+          print('sdist smoke ok')
+          PY
 
       - name: Upload sdist artifacts
         uses: actions/upload-artifact@v4
@@ -121,8 +134,12 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests on installed wheel
+        shell: pwsh
         run: |
-          pytest --durations=0 -n auto --dist loadfile --cov=statmoments --cov-report=xml .
+          $testDir = Join-Path $env:RUNNER_TEMP 'statmoments-wheel-test'
+          New-Item -ItemType Directory -Force -Path $testDir | Out-Null
+          Set-Location $testDir
+          python -m pytest --durations=0 -n auto --dist loadfile --cov=statmoments --cov-report "xml:$env:GITHUB_WORKSPACE\coverage.xml" --pyargs statmoments.tests
           coverage report -m
 
       - name: Upload wheel artifacts
