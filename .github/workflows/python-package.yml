@@ -131,18 +131,21 @@ jobs:
       - name: Run tests on installed wheel
         shell: pwsh
         run: |
+          $workspace = $env:GITHUB_WORKSPACE
+          $covConfig = Join-Path $workspace 'pyproject.toml'
+          $covXml = Join-Path $workspace 'coverage.xml'
           $testDir = Join-Path $env:RUNNER_TEMP 'statmoments-wheel-test'
           New-Item -ItemType Directory -Force -Path $testDir | Out-Null
           Set-Location $testDir
-          python -m pytest --durations=0 -n auto --dist loadfile --cov=statmoments --cov-report "xml:$env:GITHUB_WORKSPACE\coverage.xml" --pyargs statmoments.tests
-          coverage report -m
+          python -m pytest --durations=0 -n auto --dist loadfile --cov=statmoments --cov-config "$covConfig" --cov-report "xml:$covXml" --pyargs statmoments.tests
+          coverage report --rcfile "$covConfig" -m
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
         with:
           name: package-wheel-windows-py${{ matrix.python-version }}
           path: dist/*.whl
-          retention-days: 7
+          retention-days: 1
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
