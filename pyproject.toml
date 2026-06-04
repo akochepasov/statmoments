@@ -162,7 +162,7 @@ exclude_lines = [
 # Wheel builds (CI: cibuildwheel on Linux, native build on Windows)
 [tool.cibuildwheel]
 build = ["cp38-*", "cp310-*", "cp312-*"]
-skip = ["*-musllinux_*", "cp38t-*", "cp39t-*", "cp310t-*", "cp311t-*", "cp312t-*"]
+skip = ["*-musllinux_*"]
 archs = ["x86_64"]
 manylinux-x86_64-image = "manylinux2014"
 
