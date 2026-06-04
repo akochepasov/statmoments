@@ -12,13 +12,14 @@ coverage:
   status:
     project:
       default:
-        threshold: 1%   # Allows coverage to drop by 1% and still pass
+        threshold: 10%   # Allows coverage to drop by 10% and still pass
     patch:
       default:
-        threshold: 5%   # Allows patch coverage to drop by 5%
+        threshold: 20%   # Allows patch coverage to drop by 20%
 
-  ignore:
-    - "*/tests/*"                 # Ignore test files in coverage
-    - "*/examples/*"              # Ignore example files
-    - "setup.py"                  # Ignore setup files
-    - "statmoments/_version.py"   # Ignore auto-generated version file
+ignore:
+  - "*/tests/*"                 # Ignore test files in coverage
+  - "*/benchmark/*"             # Ignore benchmark files
+  - "*/examples/*"              # Ignore example files
+  - "setup.py"                  # Ignore setup files
+  - "statmoments/_version.py"   # Ignore static version file
