@@ -158,3 +158,20 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
+
+# Wheel builds (CI: cibuildwheel on Linux, native build on Windows)
+[tool.cibuildwheel]
+build = ["cp38-*", "cp310-*", "cp312-*"]
+skip = ["*-musllinux_*", "cp38t-*", "cp39t-*", "cp310t-*", "cp311t-*", "cp312t-*"]
+archs = ["x86_64"]
+manylinux-x86_64-image = "manylinux2014"
+
+[tool.cibuildwheel.linux]
+before-build = "pip install --upgrade pip && pip install numpy 'Cython>=0.29' setuptools wheel"
+test-requires = ["pytest", "numpy", "scipy"]
+test-command = "python -c \"import statmoments; import statmoments.univar as uv; uv.Univar(4, 2, moment=2); print('smoke ok')\""
+
+[tool.cibuildwheel.windows]
+before-build = "pip install --upgrade pip && pip install numpy 'Cython>=0.29' setuptools wheel"
+test-requires = ["pytest", "numpy", "scipy"]
+test-command = "python -c \"import statmoments; import statmoments.univar as uv; uv.Univar(4, 2, moment=2); print('smoke ok')\""
