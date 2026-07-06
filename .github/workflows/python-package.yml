@@ -70,7 +70,6 @@ jobs:
 
       - name: Smoke test sdist install
         run: |
-          workspace="${GITHUB_WORKSPACE}"
           test_dir="${RUNNER_TEMP}/statmoments-sdist-test"
           mkdir -p "$test_dir"
           cd "$test_dir"
