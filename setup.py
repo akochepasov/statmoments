@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import setuptools
 import subprocess
 
 from Cython.Build import cythonize
-
-from statmoments._build_config import get_cython_compile_time_env, make_ext
+import Cython.Distutils.extension as cython_extension
 
 
 if sys.version_info < (3, 8, 0):
@@ -38,7 +38,7 @@ def get_cython_compile_time_env():
 
 
 def make_ext(modname, filename):
-  # This function required for both in-place pyximport compilation and for setup.py builds.
+  # This function required for in-place pyximport compilation over pyxbld
   compile_args, link_args = [], []
 
   if False:
@@ -79,6 +79,7 @@ def main():
   kwargs = {}
   # if store_git_hash():
   #   kwargs["package_data"] = {"statmoments": ["GIT_VERSION.txt"]}
+
   extensions = []
   if USE_CYTHON:
     # Cythonize
