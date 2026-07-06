@@ -105,20 +105,6 @@ version = {attr = "statmoments._version.__version__"}
 [tool.setuptools.package-data]
 statmoments = ["*.pyx", "*.pxd", "*.pyxbld", "GIT_VERSION.txt"]
 
-[tool.setuptools]
-zip-safe = false
-license-files = ["LICENSE"]
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["statmoments*"]
-
-[tool.setuptools.dynamic]
-version = {attr = "statmoments._version.__version__"}
-
-[tool.setuptools.package-data]
-statmoments = ["*.pyx", "*.pxd", "*.pyd", "*.so", "GIT_VERSION.txt"]
-
 # Tool configurations
 
 [tool.pytest.ini_options]
@@ -161,7 +147,7 @@ exclude_lines = [
 
 # Wheel builds (CI: cibuildwheel on Linux, native build on Windows)
 [tool.cibuildwheel]
-build = ["cp38-*", "cp310-*", "cp312-*"]
+build = ["cp310-*", "cp312-*"]
 skip = ["*-musllinux_*"]
 archs = ["x86_64"]
 manylinux-x86_64-image = "manylinux2014"
