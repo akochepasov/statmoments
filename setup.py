@@ -75,7 +75,8 @@ def store_git_hash():
   return True
 
 
-def build_extensions():
+def main():
+  kwargs = {}
   # if store_git_hash():
   #   kwargs["package_data"] = {"statmoments": ["GIT_VERSION.txt"]}
 
@@ -86,8 +87,10 @@ def build_extensions():
   else:
     # Compile C code
     extensions = [make_ext("statmoments._native", 'statmoments/_native.c')]
-  return extensions
+
+  setuptools.setup(ext_modules=extensions, **kwargs)
 
 
-# PEP 517 / pip install from sdist: setuptools imports this module and reads ext_modules.
-setuptools.setup(ext_modules=build_extensions())
+# Run setup only when executed as a script, not when imported for helper functions.
+if __name__ == '__main__':
+  main()
