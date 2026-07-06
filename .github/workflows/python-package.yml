@@ -60,7 +60,7 @@ jobs:
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy 'Cython>=0.29' build setuptools wheel
+          pip install numpy cython build setuptools wheel
 
       - name: Build package
         run: python -m build --sdist
@@ -83,14 +83,20 @@ jobs:
           path: dist/*.tar.gz
           retention-days: 1
 
-  build-windows-wheels:
-    name: Windows ${{ matrix.python-version }}
+  build-test-wheels:
+    name: ${{ matrix.python-version }} on ${{ matrix.os }}
     needs: lint
-    runs-on: windows-2022
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-22.04, macOS-14, windows-2022]
         python-version: ['3.8', '3.10', '3.12']
+        exclude:
+          - os: ubuntu-22.04
+            python-version: '3.8'
+          - os: ubuntu-22.04
+            python-version: '3.10'
 
     steps:
       - run: echo "The job triggered by ${{ github.event_name }} on ${{ runner.os }}"
@@ -108,18 +114,34 @@ jobs:
           cache: 'pip'
 
       - name: Build Windows wheel
+        if: matrix.os == 'windows-2022'
         run: |
           python -m pip install --upgrade pip
-          pip install numpy 'Cython>=0.29' build setuptools wheel
+          pip install numpy cython build setuptools wheel
           python -m build --wheel
 
-      - name: Install built wheel
+      - name: Build manylinux wheels
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          python -m pip install --upgrade pip
+          pip install cibuildwheel
+          python -m cibuildwheel --platform linux --output-dir dist
+
+      - name: Install built wheel (Windows)
+        if: matrix.os == 'windows-2022'
         shell: pwsh
         run: |
           $wheel = (Get-ChildItem -Path dist -Filter *.whl | Select-Object -First 1).FullName
           pip install "${wheel}[test]"
 
-      - name: Run tests on installed wheel
+      - name: Install built wheel (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          wheel=$(ls dist/*cp312*.whl | head -n 1)
+          pip install "${wheel}[test]"
+
+      - name: Run tests on installed wheel (Windows)
+        if: matrix.os == 'windows-2022'
         shell: pwsh
         run: |
           $workspace = $env:GITHUB_WORKSPACE
@@ -131,50 +153,8 @@ jobs:
           python -m pytest --durations=0 -n auto --dist loadfile --cov=statmoments --cov-config "$covConfig" --cov-report "xml:$covXml" --pyargs statmoments.tests
           coverage report --rcfile "$covConfig" -m
 
-      - name: Upload windows wheel artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: package-wheel-windows-py${{ matrix.python-version }}
-          path: dist/*.whl
-          retention-days: 1
-
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.12'
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: unittests
-          fail_ci_if_error: true
-          files: ./coverage.xml
-
-  build-linux-manylinux-wheels:
-    name: Build manylinux wheels (Linux x86_64)
-    needs: lint
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout project
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-
-      - name: Build manylinux wheels
-        run: |
-          python -m pip install --upgrade pip
-          pip install cibuildwheel
-          python -m cibuildwheel --platform linux --output-dir dist
-
-      - name: Install built Linux wheel
-        run: |
-          wheel=$(ls dist/*.whl | head -n 1)
-          pip install "${wheel}[test]"
-
-      - name: Run tests on installed Linux wheel
+      - name: Run tests on installed wheel (Linux)
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           workspace="${GITHUB_WORKSPACE}"
           cov_config="${workspace}/pyproject.toml"
@@ -185,16 +165,25 @@ jobs:
           python -m pytest --durations=0 -n auto --dist loadfile --cov=statmoments --cov-config "$cov_config" --cov-report "xml:$cov_xml" --pyargs statmoments.tests
           coverage report --rcfile "$cov_config" -m
 
-      - name: Upload linux wheel artifacts
+      - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: package-wheel-linux-manylinux-x86_64
+          name: ${{ matrix.os == 'windows-2022' && format('package-wheel-windows-py{0}', matrix.python-version) || 'package-wheel-linux-manylinux-x86_64' }}
           path: dist/*.whl
           retention-days: 1
 
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: ${{ matrix.os == 'windows-2022' && 'unittests' || 'linux' }}
+          fail_ci_if_error: true
+          files: ${{ matrix.os == 'windows-2022' && './coverage.xml' || './coverage-linux.xml' }}
+
   collect-artifacts:
     name: Collect all artifacts
-    needs: [build-windows-wheels, build-sdist, build-linux-manylinux-wheels]
+    needs: [build-test-wheels, build-sdist]
     runs-on: ubuntu-22.04
     permissions:
       actions: write
