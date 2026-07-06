@@ -70,20 +70,11 @@ jobs:
 
       - name: Smoke test sdist install
         run: |
-          python - << 'PY'
-          import os
-          import tempfile
-
-          # Avoid importing the checked-out source tree from the repo root.
-          os.chdir(tempfile.gettempdir())
-
-          import statmoments
-          import statmoments.univar as uv
-
-          print(statmoments.__file__)
-          uv.Univar(4, 2, moment=2)
-          print('sdist smoke ok')
-          PY
+          workspace="${GITHUB_WORKSPACE}"
+          test_dir="${RUNNER_TEMP}/statmoments-sdist-test"
+          mkdir -p "$test_dir"
+          cd "$test_dir"
+          python -c "import statmoments; import statmoments.univar as uv; uv.Univar(4, 2, moment=2); print('sdist smoke ok')"
 
       - name: Upload sdist artifacts
         uses: actions/upload-artifact@v4
