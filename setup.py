@@ -9,9 +9,9 @@ from Cython.Build import cythonize
 import Cython.Distutils.extension as cython_extension
 
 
-if sys.version_info < (3, 10, 0):
+if sys.version_info < (3, 8, 0):
   # It should work even with 2.7, just never really tested
-  raise RuntimeError("statmoments requires Python 3.10 or later")
+  raise RuntimeError("statmoments requires Python 3.8 or later")
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 USE_CYTHON = os.path.isfile(os.path.join(basedir, "statmoments/_native.pyx"))
@@ -32,7 +32,7 @@ def get_cython_compile_time_env():
       }
     print("GPU supported: detected nvmath-python and cupy, enabling CUDA compilation")
   except ModuleNotFoundError:
-    print("Tip: To use GPU install cupy and nvmath-python; Here nvmath is not installed")
+    print("Tip: To use GPU, install cupy and nvmath-python; nvmath is currently not installed")
 
   return cythonize_env
 
