@@ -140,7 +140,7 @@ jobs:
           python -m pytest --durations=0 -n auto --dist loadfile --cov=statmoments --cov-config "$covConfig" --cov-report "xml:$covXml" --pyargs statmoments.tests
           coverage report --rcfile "$covConfig" -m
 
-      - name: Upload wheel artifacts
+      - name: Upload windows wheel artifacts
         uses: actions/upload-artifact@v4
         with:
           name: package-wheel-windows-py${{ matrix.python-version }}
@@ -199,7 +199,7 @@ jobs:
         with:
           name: package-wheel-linux-manylinux-x86_64
           path: dist/*.whl
-          retention-days: 7
+          retention-days: 1
 
   collect-artifacts:
     name: Collect all artifacts
