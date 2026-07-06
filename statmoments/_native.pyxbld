@@ -1,7 +1,10 @@
 
-from setup import make_ext
+from statmoments._build_config import make_ext
 
 def make_setup_args():
+  import numpy as np
+
   return {
+    'include_dirs': [np.get_include()],
     'script_args' : ['--verbose'],
     }

@@ -9,31 +9,32 @@ from Cython.Build import cythonize
 import Cython.Distutils.extension as cython_extension
 
 
-if sys.version_info < (3, 6, 0):
+if sys.version_info < (3, 8, 0):
   # It should work even with 2.7, just never really tested
-  raise RuntimeError("statmoments requires Python 3.6 or later")
+  raise RuntimeError("statmoments requires Python 3.8 or later")
 
-kwargs = {}
 basedir = os.path.abspath(os.path.dirname(__file__))
 USE_CYTHON = os.path.isfile(os.path.join(basedir, "statmoments/_native.pyx"))
 
-USE_CUPY_CUDA = 0
-_cythonize_env = {'USE_CUPY_CUDA': 0}
 
-try:
-  import cupy as cp  # noqa: F401
-  import nvmath.bindings.cublas as nvmath_cublas  # noqa: F401
-  USE_CUPY_CUDA = 1
-  # Compilation settings for cupy and _native.pyx
-  _cythonize_env = {
-      'CUPY_CUDA_VERSION': 124,
-      'CUPY_HIP_VERSION': 0,
-      'CUPY_USE_CUDA_PYTHON': 0,
-      'USE_CUPY_CUDA': USE_CUPY_CUDA
-  }
-  print("nvmath found and used")
-except ModuleNotFoundError:
-  print("Unable to use GPU: nvmath is not installed")
+def get_cython_compile_time_env():
+  cythonize_env = {'USE_CUPY_CUDA': 0}
+
+  try:
+    import cupy as cp  # noqa: F401
+    import nvmath.bindings.cublas as nvmath_cublas  # noqa: F401
+    # Compilation settings for cupy and _native.pyx
+    cythonize_env = {
+          'CUPY_CUDA_VERSION': 124,
+          'CUPY_HIP_VERSION': 0,
+          'CUPY_USE_CUDA_PYTHON': 0,
+          'USE_CUPY_CUDA': 1
+      }
+    print("GPU supported: detected nvmath-python and cupy, enabling CUDA compilation")
+  except ModuleNotFoundError:
+    print("Tip: To use GPU, install cupy and nvmath-python; nvmath is currently not installed")
+
+  return cythonize_env
 
 
 def make_ext(modname, filename):
@@ -52,23 +53,16 @@ def make_ext(modname, filename):
     # link_args.extend(['/DEBUG'])        # Output PDB in link time
     pass
 
- # Always rebuild. TODO: delete force later
-  ext = cython_extension.Extension(modname, [filename],
-                                   extra_compile_args=compile_args,
-                                   extra_link_args=link_args,
-                                   cython_compile_time_env=_cythonize_env,
-                                   # cython_gdb = True,
-                                   # force = True # always rebuild
-                                   )
+  ext = cython_extension.Extension(
+      modname,
+      [filename],
+      extra_compile_args=compile_args,
+      extra_link_args=link_args,
+      cython_compile_time_env=get_cython_compile_time_env(),
+      # cython_gdb = True,
+      # force = True   # always rebuild
+      )
   return ext
-
-
-def get_version():
-  _version_dict = {}
-  version_path = os.path.join(basedir, 'statmoments/_version.py')
-  with open(version_path) as h:
-    exec(h.read(), None, _version_dict)
-  return _version_dict['__version__']
 
 
 def store_git_hash():
@@ -81,22 +75,19 @@ def store_git_hash():
   return True
 
 
-def main():
+def build_extensions():
   # if store_git_hash():
   #   kwargs["package_data"] = {"statmoments": ["GIT_VERSION.txt"]}
 
   extensions = []
   if USE_CYTHON:
     # Cythonize
-    extensions = cythonize('statmoments/_native.pyx', compile_time_env=_cythonize_env)
+    extensions = cythonize('statmoments/_native.pyx', compile_time_env=get_cython_compile_time_env())
   else:
-    # Compile c code
+    # Compile C code
     extensions = [make_ext("statmoments._native", 'statmoments/_native.c')]
-  setuptools.setup(
-      version=get_version(),
-      ext_modules=extensions,
-      **kwargs)
+  return extensions
 
 
-if __name__ == '__main__':
-  main()
+# PEP 517 / pip install from sdist: setuptools imports this module and reads ext_modules.
+setuptools.setup(ext_modules=build_extensions())

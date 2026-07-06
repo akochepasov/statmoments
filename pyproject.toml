@@ -1,24 +1,12 @@
-[build-system]
-requires = [
-    "setuptools>=45",
-    "wheel",
-    "cython",
-    "numpy>=1.17,<2",
-    "scipy<=1.15",
-    # "cupy-cuda12x",  # Optional CUDA support
-    # "nvmath-python"  # Optional CUDA support
-]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "statmoments"
-version = "1.1.1"
-description = "Streaming univariate and bivariate statistical moments"
-requires-python = ">=3.6"
+dynamic = ["version"]
+description = "Fast streaming single-pass univariate/bivariate statistics and t-test"
+requires-python = ">=3.8"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = {file = "LICENSE"}
 authors = [
-    {name = "Anton Kochepasov"}
+    {name = "Anton Kochepasov", email = "akss@me.com"}
 ]
 keywords = [
     "data-science",
@@ -26,10 +14,10 @@ keywords = [
     "bivariate",
     "skewness",
     "kurtosis",
+    "coskewness",
+    "cokurtosis",
     "statistics",
     "streaming",
-    "numpy",
-    "vectorization"
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -37,13 +25,10 @@ classifiers = [
     "Intended Audience :: Education",
     "Intended Audience :: Financial and Insurance Industry",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Cython",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -60,21 +45,65 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Social Science",
 ]
+
+# Core runtime dependencies
 dependencies = [
     "numpy>=1.17,<2",
     "scipy<=1.15",
-    "h5py",
-    "psutil",
-    "cython",
-    # "pywin32;platform_system=='Windows'"
+    "h5py<=3.11",
+    "psutil<=5.9",
 ]
+
+[build-system]
+requires = [
+    "setuptools>=61,<77",
+    "wheel",
+    "Cython>=0.29",
+    "numpy>=1.17,<2",
+    "scipy<=1.15",
+]
+build-backend = "setuptools.build_meta"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-xdist",
+]
+
+gpu = [
+    "cupy-cuda12x",
+    "nvmath-python"
+]
+
+# Development dependencies
+dev = [
+    "statmoments[test]",
+    "statmoments[gpu]",
+    "Cython>=0.29",
+    "build",
+    "wheel",
+]
+
+[project.urls]
+Homepage = "https://github.com/akochepasov/statmoments"
+Documentation = "https://github.com/akochepasov/statmoments#readme"
+"Source Code" = "https://github.com/akochepasov/statmoments"
+"Issue Tracker" = "https://github.com/akochepasov/statmoments/issues"
+
+[tool.setuptools]
+zip-safe = false
+license-files = ["LICENSE"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["statmoments*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "statmoments._version.__version__"}
 
-[project.urls]
-"Source Code" = "https://github.com/akochepasov/statmoments/"
-"Issues" = "https://github.com/akochepasov/statmoments/issues"
+[tool.setuptools.package-data]
+statmoments = ["*.pyx", "*.pxd", "*.pyxbld", "GIT_VERSION.txt"]
 
 # Tool configurations
 
