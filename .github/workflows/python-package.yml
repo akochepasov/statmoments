@@ -19,12 +19,12 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.8'
           cache: 'pip'
@@ -42,19 +42,19 @@ jobs:
           flake8 --count --exit-zero --max-line-length=120 --max-complexity=10 --statistics .
 
   build-sdist:
-    name: Build sdist
+    name: Build and test sdist
     needs: lint
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: '3.8'
           cache: 'pip'
 
       - name: Install build dependencies
@@ -64,6 +64,26 @@ jobs:
 
       - name: Build package
         run: python -m build --sdist
+
+      - name: Install from sdist (compile Cython during install)
+        run: pip install dist/*.tar.gz
+
+      - name: Smoke test on sdist install
+        run: |
+          python - << 'PY'
+          import os
+          import tempfile
+
+          # Avoid importing the checked-out source tree from the repo root.
+          os.chdir(tempfile.gettempdir())
+
+          import statmoments
+          import statmoments.univar as uv
+
+          print(statmoments.__file__)
+          uv.Univar(4, 2, moment=2)
+          print('sdist smoke ok')
+          PY
 
       - name: Upload sdist artifacts
         uses: actions/upload-artifact@v4
@@ -87,12 +107,12 @@ jobs:
       - run: echo "The branch name ${{ github.ref }}"
 
       - name: Checkout project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -129,6 +149,7 @@ jobs:
           coverage report -m
 
       - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -140,6 +161,9 @@ jobs:
     name: Collect all artifacts
     needs: [build-test-wheels, build-sdist]
     runs-on: ubuntu-22.04
+    permissions:
+      actions: write
+      contents: read
     steps:
       - name: Download all wheels
         uses: actions/download-artifact@v4
