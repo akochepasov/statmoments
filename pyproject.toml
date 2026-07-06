@@ -153,7 +153,7 @@ archs = ["x86_64"]
 manylinux-x86_64-image = "manylinux2014"
 
 [tool.cibuildwheel.linux]
-before-build = "pip install --upgrade pip && pip install numpy 'Cython>=0.29' setuptools wheel"
+before-build = "pip install --upgrade pip && pip install 'numpy<2' 'Cython>=0.29' setuptools wheel"
 
 [tool.cibuildwheel.windows]
-before-build = "pip install --upgrade pip && pip install numpy 'Cython>=0.29' setuptools wheel"
+before-build = "pip install --upgrade pip && pip install 'numpy<2' 'Cython>=0.29' setuptools wheel"
