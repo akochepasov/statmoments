@@ -1,5 +1,13 @@
+import importlib.util
+import os
 
-from statmoments._build_config import make_ext
+_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+_setup_path = os.path.join(_repo_root, "setup.py")
+_spec = importlib.util.spec_from_file_location("statmoments_setup_helpers", _setup_path)
+_setup_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_setup_mod)
+make_ext = _setup_mod.make_ext
+
 
 def make_setup_args():
   import numpy as np
