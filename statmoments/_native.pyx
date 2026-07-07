@@ -201,46 +201,37 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
       trans_ = 0 if trans == b'N' else 1  # N if N else T
       scipy_blas.dsyrk(alpha, A.T, beta, C.T, trans_, uplo_, 1)
   else:
+    hndl = _get_cached_cublas_handle()
+    orig_mode = nvmath_cublas.get_pointer_mode(hndl)
+    nvmath_cublas.set_pointer_mode(hndl, 1)
+
+    uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
+    trans_ = 0 if trans == b'N' else 1  # N if N else T
+
     if cython.compiled:
       # print("CUDA NATIVE DSYRK")  # Verified on nov 30
       dA = cp.asarray(A)
       dC = cp.asarray(C)
       a = cp.array(alpha, dtype=dA.dtype)
-      b = cp.array(beta,  dtype=dA.dtype)
-
-      hndl = _get_cached_cublas_handle()
-      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
-      nvmath_cublas.set_pointer_mode(hndl, 1)
-
-      uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
-      trans_ = 0 if trans == b'N' else 1  # N if N else T
+      b = cp.array(beta,  dtype=dC.dtype)
       nvmath_cublas.dsyrk(hndl, uplo_, trans_, n, k,
                           a.data.ptr, dA.data.ptr, lda,
                           b.data.ptr, dC.data.ptr, ldc)
-
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC)
-      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
     else:
       # print("CUDA DSYRK")  # Verified on nov 30
       dA = cp.asarray(A.T)
       dC = cp.asarray(C.T)
       a = cp.array(alpha, dtype=dA.dtype)
-      b = cp.array(beta,  dtype=dA.dtype)
-
-      hndl = _get_cached_cublas_handle()
-      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
-      nvmath_cublas.set_pointer_mode(hndl, 1)
-
-      uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
-      trans_ = 0 if trans == b'N' else 1  # N if N else T
+      b = cp.array(beta,  dtype=dC.dtype)
       nvmath_cublas.dsyrk(hndl, uplo_, trans_, n, k,
                           a.data.ptr, dA.data.ptr, lda,
                           b.data.ptr, dC.data.ptr, ldc)
-
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC.T)
-      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
+
+    nvmath_cublas.set_pointer_mode(hndl, orig_mode)
 
 @cython.cfunc
 @cython.inline
@@ -280,51 +271,40 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
       transb_ = 1 if transb != b'N' else 0
       scipy_blas.dgemm(alpha, A.T, B.T, beta, C.T, transa_, transb_, 1)
   else:
+    hndl = _get_cached_cublas_handle()
+    orig_mode = nvmath_cublas.get_pointer_mode(hndl)
+    nvmath_cublas.set_pointer_mode(hndl, 1)
+
+    transa_ = 0 if transa == b'N' else 1  # N if N else T
+    transb_ = 0 if transb == b'N' else 1  # N if N else T
+
     if cython.compiled:
       # print("CUDA NATIVE DGEMM")  # Verified on Jul 6 2026
-      hndl = _get_cached_cublas_handle()
-      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
-      # host mode throws "fatal exception: access violation" in dgemm
-      nvmath_cublas.set_pointer_mode(hndl, 1)
-
       dA = cp.asarray(A)
       dB = cp.asarray(B)
       dC = cp.asarray(C)
       a = cp.array(alpha, dtype=dA.dtype)
-      b = cp.array(beta,  dtype=dA.dtype)
-      transa_ = 0 if transa == b'N' else 1  # N if N else T
-      transb_ = 0 if transb == b'N' else 1  # N if N else T
-
+      b = cp.array(beta,  dtype=dC.dtype)
       nvmath_cublas.dgemm(hndl, transa_, transb_, m, n, k,
                           a.data.ptr, dA.data.ptr, lda,
                           dB.data.ptr, ldb,
                           b.data.ptr, dC.data.ptr, ldc)
-
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC)
-      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
     else:
       # print("CUBLAS DGEMM")  # Verified on Jul 6 2026
       dA = cp.asarray(A.T)
       dB = cp.asarray(B.T)
       dC = cp.asarray(C.T)
       a = cp.array(alpha, dtype=dA.dtype)
-      b = cp.array(beta,  dtype=dA.dtype)
-
-      hndl = _get_cached_cublas_handle()
-      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
-      nvmath_cublas.set_pointer_mode(hndl, 1)
-
-      transa_ = 0 if transa == b'N' else 1  # N if N else T
-      transb_ = 0 if transb == b'N' else 1  # N if N else T
+      b = cp.array(beta,  dtype=dC.dtype)
       nvmath_cublas.dgemm(hndl, transa_, transb_, m, n, k,
                           a.data.ptr, dA.data.ptr, lda,
                           dB.data.ptr, ldb,
                           b.data.ptr, dC.data.ptr, ldc)
-
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC.T)
-      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
+    nvmath_cublas.set_pointer_mode(hndl, orig_mode)
 
 
 ################################ LOCAL HELPERS ################################
