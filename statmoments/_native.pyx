@@ -231,6 +231,7 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
 def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
   """ C = alpha * transa(A) * transb(B) + beta * C """
   cython.declare(n=cython.int, m=cython.int, k=cython.int, lda=cython.int, ldb=cython.int, ldc=cython.int)
+  cython.declare(hndl = cython.size_t, orig_mode = cython.int)
   n = cython.cast(cython.int, C.shape[0])
   m = cython.cast(cython.int, C.shape[1])
   k = cython.cast(cython.int, A.shape[0] if transa == b'N' else A.shape[1])
