@@ -144,3 +144,16 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
+
+# Wheel builds (CI: cibuildwheel on Linux, native build on Windows)
+[tool.cibuildwheel]
+build = ["cp310-*", "cp312-*"]
+skip = ["*-musllinux_*"]
+archs = ["x86_64"]
+manylinux-x86_64-image = "manylinux2014"
+
+[tool.cibuildwheel.linux]
+before-build = "pip install --upgrade pip && pip install 'numpy<2' 'Cython>=0.29' setuptools wheel"
+
+[tool.cibuildwheel.windows]
+before-build = "pip install --upgrade pip && pip install 'numpy<2' 'Cython>=0.29' setuptools wheel"
