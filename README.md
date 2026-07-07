@@ -2,7 +2,7 @@
 
 Fast streaming univariate and bivariate moments and t-statistics.
 
-statmoments is a high-performance library for computing univariate and bivariate statistical moments in a single pass over large waveform datasets with thousands of sample points. The moments can be converted to Welch's t-test statistics for hypothesis testing on arbitrary data partitions.
+statmoments is a high-performance library to compute higher-order univariate and bivariate statistical moments in a single pass over large waveform datasets with thousands of sample points. The moments can be converted to Welch's t-test statistics for hypothesis testing on arbitrary data partition.
 
 ## Features
 
@@ -10,16 +10,16 @@ statmoments is a high-performance library for computing univariate and bivariate
 - Covariance, coskewness, cokurtosis with possibility to compute even higher moments
 - Efficient memory usage through dense matrix representation
 - High numerical accuracy
-- NVIDIA GPU computation with CPU fallback
+- NVIDIA GPU acceleration for intensive operations, with CPU fallback
 - Command-line interface for analysis of existing HDF5 datasets
 
 ## How is it different?
 
-When input data differences are subtle, millions of waveforms may need to be processed to identify statistically significant differences, demanding efficient algorithms. High-order moment computations traditionally require multiple passes and may necessitate restarting analysis when new data arrives. With thousands of sample points per waveform, the computational complexity grows substantially, as these applications typically require millions to billions of data observations because dependencies are often weak, masked by noise, or only apparent across large populations or extended time periods, making single-pass streaming algorithms essential for practical analysis.
+statmoments performs single-pass streaming analysis of higher-order moments for individual sample points and joint central moments for pairs of sample points.
 
-A streaming algorithm processes sequences of inputs in a single pass as they are collected, suitable for large datasets that don't completely fit in memory. The dense matrix representation of an intermediate accumulator reduces memory requirements. The accumulator can be converted to co-moments and Welch's t-test statistics on demand. Data batches can be iteratively processed and then discarded. The library handles significant input streams, processing hundreds of megabytes per second. When fast enough, it's suitable for real-time sources like oscilloscopes, sensors, financial markets etc.
+When differences are subtle, analysis may require millions of waveforms with thousands of sample points each. High-order moment computations traditionally require multiple passes and may necessitate restarting analysis when new data arrives. With thousands of sample points per waveform, the computational complexity grows substantially, as these applications typically require millions to billions of data observations because dependencies are often weak, masked by noise, or only apparent across large populations or extended time periods, making single-pass streaming algorithms essential for practical analysis. In this library, input batches can be processed and discarded, so the complete dataset need not fit in memory. The dense twofold matrix representation of intermediate accumulators reduces memory requirements. The accumulators can be converted to co-moments and Welch's t-test statistics on demand. The library handles significant input streams, processing hundreds of megabytes per second. When fast enough, it's suitable for real-time sources like oscilloscopes, sensors, and financial markets.
 
-Yet another dimension can be added when the data split is unknown. In other words, which bucket an input waveform belongs to. This library solves this with given pre-classification of the input data and computing moments for all the requested data splits.
+When the relevant data split is not known in advance, multiple candidate splits can be analyzed at once. Each incoming waveform is pre-classified into one of two groups for each requested split, and the library computes moments for all of them.
 
 Some of the benefits of streaming computation include:
 
@@ -119,7 +119,7 @@ More examples with specific details can be found in `examples` and `tests` direc
 
 ## Implementation Notes
 
-statmoments uses top notch vendor BLAS implementations, including GPU based on [nvmath-python](https://github.com/NVIDIA/nvmath-python) if available, for the best peformance on Windows, Linux and Macs, to maximize computational efficiency.
+statmoments uses fastest BLAS implementations for computationally intensive matrix operations. When CuPy and [nvmath-python](https://github.com/NVIDIA/nvmath-python) are available, supported operations run on NVIDIA GPU. If GPU dependencies are absent, computation runs on the CPU.
 
 Bivariate results -- co-moments and t-tests -- are represented by the **upper triangle** of the symmetric matrix as 1D array for each classifier for efficient memory use, similar to `numpy.triu_indices_from()`.
 
@@ -127,13 +127,13 @@ Due to RAM limits, the results are produced one at a time for each input classif
 
 ## Installation
 
-- CPU only (default):
-  ```shell
-  pip install statmoments
-  ```
 - Optional NVIDIA GPU acceleration:
   ```shell
   pip install "statmoments[gpu]"
+  ```
+- Regular CPU installation:
+  ```shell
+  pip install statmoments
   ```
 
 ## Citation
