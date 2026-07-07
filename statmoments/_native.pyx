@@ -243,17 +243,20 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
 
   if USE_GPU == 0:
     if cython.compiled:
+      # print("MKL NATIVE DGEMM")  # Verified on Jul 6 2026
       cython_blas.dgemm(cython.address(transa), cython.address(transb),
                       cython.address(m), cython.address(n), cython.address(k),
                       cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
                       cython.address(B[0, 0]), cython.address(ldb),
                       cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
     else:
+      # print("MKL DGEMM")  # Verified on Jul 6 2026
       transa_ = 1 if transa != b'N' else 0
       transb_ = 1 if transb != b'N' else 0
       scipy_blas.dgemm(alpha, A.T, B.T, beta, C.T, transa_, transb_, 1)
   else:
     if cython.compiled:
+      # print("CUDA NATIVE DGEMM")  # Verified on Jul 6 2026
       hndl = nvmath_cublas.create()
       orig_mode = nvmath_cublas.get_pointer_mode(hndl)
       # host mode throws "fatal exception: access violation" in dgemm
@@ -277,6 +280,7 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
       nvmath_cublas.set_pointer_mode(hndl, orig_mode)
       nvmath_cublas.destroy(hndl)
     else:
+      # print("CUBLAS DGEMM")  # Verified on Jul 6 2026
       dA = cp.asarray(A.T)
       dB = cp.asarray(B.T)
       dC = cp.asarray(C.T)
@@ -289,11 +293,12 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
 
       transa_ = 0 if transa == b'N' else 1  # N if N else T
       transb_ = 0 if transb == b'N' else 1  # N if N else T
-      nvmath_cublas.gemm(hndl, transa_, transb_, m, n, k,
+      nvmath_cublas.dgemm(hndl, transa_, transb_, m, n, k,
                           a.data.ptr, dA.data.ptr, lda,
                           dB.data.ptr, ldb,
                           b.data.ptr, dC.data.ptr, ldc)
 
+      # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC.T)
       nvmath_cublas.set_pointer_mode(hndl, orig_mode)
       nvmath_cublas.destroy(hndl)
