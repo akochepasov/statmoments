@@ -267,8 +267,8 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
                         cython.address(C[0, 0]), cython.address(ldc))
     else:
       # print("MKL DGEMM")  # Verified on Jul 6 2026
-      transa_ = 1 if transa != b'N' else 0
-      transb_ = 1 if transb != b'N' else 0
+      transa_ = 0 if transa == b'N' else 1  # N if N else T
+      transb_ = 0 if transb == b'N' else 1  # N if N else T
       scipy_blas.dgemm(alpha, A.T, B.T, beta, C.T, transa_, transb_, 1)
   else:
     hndl = _get_cached_cublas_handle()
