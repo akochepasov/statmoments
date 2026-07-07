@@ -241,9 +241,7 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
   # assert (A.shape[1] if transa == b'N' else A.shape[0]) == m
   # assert (B.shape[1] if transb == b'N' else B.shape[0]) == k
 
-  # if USE_GPU == 0:
-  if True:
-    # DGEMM is not ready yet
+  if USE_GPU == 0:
     if cython.compiled:
       cython_blas.dgemm(cython.address(transa), cython.address(transb),
                       cython.address(m), cython.address(n), cython.address(k),
@@ -251,7 +249,9 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
                       cython.address(B[0, 0]), cython.address(ldb),
                       cython.address(beta), cython.address(C[0, 0]), cython.address(ldc))
     else:
-      scipy_blas.dgemm(alpha, A.T, B.T, beta, C.T, 1 if transa != b'N' else 0, 1 if transb != b'N' else 0, 1)
+      transa_ = 1 if transa != b'N' else 0
+      transb_ = 1 if transb != b'N' else 0
+      scipy_blas.dgemm(alpha, A.T, B.T, beta, C.T, transa_, transb_, 1)
   else:
     if cython.compiled:
       hndl = nvmath_cublas.create()
@@ -262,25 +262,41 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
       dA = cp.asarray(A)
       dB = cp.asarray(B)
       dC = cp.asarray(C)
-      devPtrA = cython.cast(size_t, dA.data.ptr)
-      devPtrB = cython.cast(size_t, dB.data.ptr)
-      devPtrC = cython.cast(size_t, dC.data.ptr)
-
       a = cp.array(alpha, dtype=dA.dtype)
       b = cp.array(beta,  dtype=dA.dtype)
+      transa_ = 0 if transa == b'N' else 1  # N if N else T
+      transb_ = 0 if transb == b'N' else 1  # N if N else T
 
-      # nvmath_cublas.dgemm(...)
+      nvmath_cublas.dgemm(hndl, transa_, transb_, m, n, k,
+                          a.data.ptr, dA.data.ptr, lda,
+                          dB.data.ptr, ldb,
+                          b.data.ptr, dC.data.ptr, ldc)
 
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC)
       nvmath_cublas.set_pointer_mode(hndl, orig_mode)
       nvmath_cublas.destroy(hndl)
     else:
-      dA = cp.asarray(A)
-      dB = cp.asarray(B)
-      dC = cp.asarray(C)
-      # nvmath_cublas.gemm(...)
-      np.asarray(C)[:] = cp.asnumpy(dC)
+      dA = cp.asarray(A.T)
+      dB = cp.asarray(B.T)
+      dC = cp.asarray(C.T)
+      a = cp.array(alpha, dtype=dA.dtype)
+      b = cp.array(beta,  dtype=dA.dtype)
+
+      hndl = nvmath_cublas.create()
+      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
+      nvmath_cublas.set_pointer_mode(hndl, 1)
+
+      transa_ = 0 if transa == b'N' else 1  # N if N else T
+      transb_ = 0 if transb == b'N' else 1  # N if N else T
+      nvmath_cublas.gemm(hndl, transa_, transb_, m, n, k,
+                          a.data.ptr, dA.data.ptr, lda,
+                          dB.data.ptr, ldb,
+                          b.data.ptr, dC.data.ptr, ldc)
+
+      np.asarray(C)[:] = cp.asnumpy(dC.T)
+      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
+      nvmath_cublas.destroy(hndl)
 
 ################################ LOCAL HELPERS ################################
 @cython.cfunc
