@@ -187,12 +187,7 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   # Matrices have to be transposed in non cython.compiled branch to comply with F-order
 
   if USE_GPU == 0:
-    if not cython.compiled:
-      # print("MKL DSYRK")  # Verified on nov 30
-      uplo_  = 0 if  uplo == b'L' else 1  # L if L else U
-      trans_ = 0 if trans == b'N' else 1  # N if N else T
-      scipy_blas.dsyrk(alpha, A.T, beta, C.T, trans_, uplo_, 1)
-    else:
+    if cython.compiled:
       # print("MKL NATIVE DSYRK")  # Verified on nov 30
       uplo  = b'U' if  uplo == b'L' else b'L'  # U if L else L
       trans = b'N' if trans == b'N' else b'T'  # N if N else T
@@ -200,28 +195,13 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
                         cython.address(n),     cython.address(k),
                         cython.address(alpha), cython.address(A[0, 0]), cython.address(lda),
                         cython.address(beta),  cython.address(C[0, 0]), cython.address(ldc))
-  else:
-    if not cython.compiled:
-      # print("CUDA DSYRK")  # Verified on nov 30
-      dA = cp.asarray(A.T)
-      dC = cp.asarray(C.T)
-      a = cp.array(alpha, dtype=dA.dtype)
-      b = cp.array(beta,  dtype=dA.dtype)
-
-      hndl = _get_cached_cublas_handle()
-      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
-      nvmath_cublas.set_pointer_mode(hndl, 1)
-
-      uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
-      trans_ = 0 if trans == b'N' else 1  # N if N else T
-      nvmath_cublas.dsyrk(hndl, uplo_, trans_, n, k,
-                          a.data.ptr, dA.data.ptr, lda,
-                          b.data.ptr, dC.data.ptr, ldc)
-
-      # Copy out and restore mode
-      np.asarray(C)[:] = cp.asnumpy(dC.T)
-      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
     else:
+      # print("MKL DSYRK")  # Verified on nov 30
+      uplo_  = 0 if  uplo == b'L' else 1  # L if L else U
+      trans_ = 0 if trans == b'N' else 1  # N if N else T
+      scipy_blas.dsyrk(alpha, A.T, beta, C.T, trans_, uplo_, 1)
+  else:
+    if cython.compiled:
       # print("CUDA NATIVE DSYRK")  # Verified on nov 30
       dA = cp.asarray(A)
       dC = cp.asarray(C)
@@ -240,6 +220,26 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
 
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC)
+      nvmath_cublas.set_pointer_mode(hndl, orig_mode)
+    else:
+      # print("CUDA DSYRK")  # Verified on nov 30
+      dA = cp.asarray(A.T)
+      dC = cp.asarray(C.T)
+      a = cp.array(alpha, dtype=dA.dtype)
+      b = cp.array(beta,  dtype=dA.dtype)
+
+      hndl = _get_cached_cublas_handle()
+      orig_mode = nvmath_cublas.get_pointer_mode(hndl)
+      nvmath_cublas.set_pointer_mode(hndl, 1)
+
+      uplo_  = 1 if  uplo == b'L' else 0  # U if L else L
+      trans_ = 0 if trans == b'N' else 1  # N if N else T
+      nvmath_cublas.dsyrk(hndl, uplo_, trans_, n, k,
+                          a.data.ptr, dA.data.ptr, lda,
+                          b.data.ptr, dC.data.ptr, ldc)
+
+      # Copy out and restore mode
+      np.asarray(C)[:] = cp.asnumpy(dC.T)
       nvmath_cublas.set_pointer_mode(hndl, orig_mode)
 
 @cython.cfunc
@@ -325,6 +325,7 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
       # Copy out and restore mode
       np.asarray(C)[:] = cp.asnumpy(dC.T)
       nvmath_cublas.set_pointer_mode(hndl, orig_mode)
+
 
 ################################ LOCAL HELPERS ################################
 @cython.cfunc
