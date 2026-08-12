@@ -206,7 +206,7 @@ def test_ttest_2d(kernel2d):
   traces0 = np.random.normal(100, 20, (n0, tr_len))
   traces1 = np.random.normal(100, 20, (n1, tr_len))
   # Insert co-dependence to some point of one batch
-  traces0[:, 2] = (3 * traces0[:, 3] / 2 - 10)
+  traces0[:, 2] = (5 * traces0[:, 3] / 2 - 10)
   eng = statmoments.Bivar(tr_len, cl_len, moment=max_moment, kernel=kernel2d)
 
   eng.update(traces0, [[0, 1]] * n0)
