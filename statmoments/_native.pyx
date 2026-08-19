@@ -9,9 +9,14 @@ import numpy as np
 import scipy.linalg.blas as scipy_blas
 from scipy.special import binom
 
+# DEBUG flag
+USE_DEBUG = False
+
 # VTK is for benchmarking only
 cython.declare(USE_VTK = cython.int)
 USE_VTK = 0
+
+# GPU is allowed based on nvmath req's
 cython.declare(USE_GPU = cython.int)
 USE_GPU = 1
 
@@ -181,8 +186,10 @@ def dsyrk(A, C, uplo, trans=b'N', alpha=1.0, beta=1.0):
   k = cython.cast(cython.int, A.shape[0] if trans == b'N' else A.shape[1])
   lda = cython.cast(cython.int, A.shape[1])
   ldc = cython.cast(cython.int, C.shape[1])
-  # assert (A.shape[1] if trans == b'N' else A.shape[0]) == n
-  # assert C.shape[1] == n
+  if USE_DEBUG:
+    assert C.shape[1] == C.shape[0], "dsyrk: C must be square"
+    idxA = 1 if trans == b'N' else 0
+    assert A.shape[idxA] == n, f"dsyrk: for trans={trans}, A.shape[{idxA}] must equal C.shape[0]"
 
   # Matrices have to be transposed in non cython.compiled branch to comply with F-order
 
@@ -249,6 +256,14 @@ def dgemm(A, B, C, transa=b'N', transb=b'N', alpha=1.0, beta=1.0):
   lda = cython.cast(cython.int, A.shape[1])
   ldb = cython.cast(cython.int, B.shape[1])
   ldc = cython.cast(cython.int, C.shape[1])
+  if USE_DEBUG:
+    exp_n = cython.cast(cython.int, B.shape[0] if transb == b'N' else B.shape[1])
+    exp_m = cython.cast(cython.int, A.shape[1] if transa == b'N' else A.shape[0])
+    exp_k = cython.cast(cython.int, B.shape[1] if transb == b'N' else B.shape[0])
+
+    assert exp_n == n, "dgemm: C.shape[0] is incompatible with B and transb"
+    assert exp_m == m, "dgemm: C.shape[1] is incompatible with A and transa"
+    assert exp_k == k, "dgemm: shared reduction dimension mismatch between A and B"
   # assert (B.shape[0] if transb == b'N' else B.shape[1]) == n
   # assert (A.shape[1] if transa == b'N' else A.shape[0]) == m
   # assert (B.shape[1] if transb == b'N' else B.shape[0]) == k
