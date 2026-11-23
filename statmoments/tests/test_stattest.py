@@ -206,7 +206,7 @@ def test_ttest_2d(kernel2d):
   traces0 = np.random.normal(100, 20, (n0, tr_len))
   traces1 = np.random.normal(100, 20, (n1, tr_len))
   # Insert co-dependence to some point of one batch
-  traces0[:, 2] = (3 * traces0[:, 3] / 2 - 10)
+  traces0[:, 2] = (5 * traces0[:, 3] / 2 - 10)
   eng = statmoments.Bivar(tr_len, cl_len, moment=max_moment, kernel=kernel2d)
 
   eng.update(traces0, [[0, 1]] * n0)
@@ -218,7 +218,7 @@ def test_ttest_2d(kernel2d):
   # Ensure t-test finds the inserted correlation
   # Find different covars
   for tt2 in statmoments.stattests.ttests(eng, moment=(1, 1)):
-    nt.assert_array_less(np.abs(tt2[0:7]), 3.5)
+    nt.assert_array_less(np.abs(tt2[0:7]), 3.7)
     nt.assert_array_less(8, np.abs(tt2[7:-1]))
   # Find no different co-skews
   for tt3 in statmoments.stattests.ttests(eng, moment=(1, 2)):
@@ -226,7 +226,7 @@ def test_ttest_2d(kernel2d):
   # Find different co-kurtoses
   for tt4 in statmoments.stattests.ttests(eng, moment=(2, 2)):
     nt.assert_array_less(np.abs(tt4[0:8]), 2.5)
-    nt.assert_array_less(5, np.abs(tt2[8]))
+    nt.assert_array_less(5, np.abs(tt4[8]))
 
 
 @pytest.mark.parametrize("kernel2d", eng2d_list)

@@ -1,10 +1,11 @@
 [project]
 name = "statmoments"
-dynamic = ["version"]
+dynamic = ["version", "dependencies"]
 description = "Fast streaming single-pass univariate/bivariate statistics and t-test"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 readme = {file = "README.md", content-type = "text/markdown"}
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "Anton Kochepasov", email = "akss@me.com"}
 ]
@@ -29,11 +30,10 @@ classifiers = [
     "Programming Language :: Cython",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Atmospheric Science",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
@@ -46,21 +46,14 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Social Science",
 ]
 
-# Core runtime dependencies
-dependencies = [
-    "numpy>=1.17,<2",
-    "scipy<=1.15",
-    "h5py<=3.11",
-    "psutil<=5.9",
-]
-
+# scipy is a build requirement because _native.pxd cimports scipy.linalg.cython_blas.
+# The upper bound keeps the manylinux2014 build container on binary scipy wheels.
 [build-system]
 requires = [
-    "setuptools>=61,<77",
-    "wheel",
-    "Cython>=0.29",
-    "numpy>=1.17,<2",
-    "scipy<=1.15",
+    "setuptools>=77",
+    "Cython>=3.0.10,<4",
+    "numpy>=1.22.0,<2",
+    "scipy>=1.8,<1.17",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -80,9 +73,10 @@ gpu = [
 dev = [
     "statmoments[test]",
     "statmoments[gpu]",
-    "Cython>=0.29",
+    "Cython>=3.0.10,<4",
+    "setuptools>=77",
     "build",
-    "wheel",
+    "twine",
 ]
 
 [project.urls]
@@ -91,16 +85,13 @@ Documentation = "https://github.com/akochepasov/statmoments#readme"
 "Source Code" = "https://github.com/akochepasov/statmoments"
 "Issue Tracker" = "https://github.com/akochepasov/statmoments/issues"
 
-[tool.setuptools]
-zip-safe = false
-license-files = ["LICENSE"]
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["statmoments*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "statmoments._version.__version__"}
+dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.package-data]
 statmoments = ["*.pyx", "*.pxd", "*.pyxbld", "GIT_VERSION.txt"]
@@ -144,3 +135,20 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
+
+# Wheel builds (CI: cibuildwheel on Linux and Windows)
+# Other platforms install from the sdist
+[tool.cibuildwheel]
+build = ["cp310-*", "cp312-*"]
+skip = ["*-musllinux_*"]
+build-verbosity = 1
+test-command = "python -c \"import statmoments, statmoments.univar as uv; uv.Univar(4, 2, moment=2)\""
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+manylinux-x86_64-image = "manylinux2014"
+# Use compatible wheels; newer source releases may need newer build tools.
+before-test = "python -m pip install --only-binary=:all: -r '{package}/requirements.txt'"
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
