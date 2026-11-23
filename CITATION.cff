@@ -21,7 +21,8 @@ preferred-citation:
     location: "Washington DC, USA"
     date-start: "2024-12-15"
     date-end: "2024-12-18"
-  publisher: "IEEE"
+  publisher:
+    name: "IEEE"
   doi: "10.1109/BigData62323.2024.10825659"
   year: 2024
   start: 123
