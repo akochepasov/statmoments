@@ -1,5 +1,4 @@
-# DEPRECATED: This file is maintained for backwards compatibility only.
-numpy>=1.17,<2
-scipy<=1.15
-h5py<=3.11
-psutil<=5.9
+numpy>=1.22.0,<2
+scipy>=1.8
+h5py>=3.8
+psutil>=5.9.5
