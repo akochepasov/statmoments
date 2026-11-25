@@ -13,7 +13,7 @@ statmoments is a high-performance library to compute higher-order univariate and
 - NVIDIA GPU acceleration for intensive operations, with CPU fallback
 - Command-line interface for analysis of existing HDF5 datasets
 
-## How is it different?
+## How is it better?
 
 statmoments performs single-pass streaming analysis of higher-order moments for individual sample points and joint central moments for pairs of sample points.
 
