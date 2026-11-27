@@ -113,7 +113,10 @@ class _BaseImpl(object):
     return self._impl.moments(get_mm(moments), normalize)
 
   def comoments(self, moments=None, normalize=None):
-    """Return a generator, yielding flattened upper triangles of bivariate comoments for each hypotesis"""
+    """Return a generator, yielding flattened upper triangles of bivariate comoments for each hypotesis
+
+    A pair (lm, rm) yields E[(x_i - mu_i)^lm (x_j - mu_j)^rm] for i <= j, so (1, 2) and (2, 1) differ.
+    """
     return self._impl.comoments(get_lmrm(moments), normalize)
 
 

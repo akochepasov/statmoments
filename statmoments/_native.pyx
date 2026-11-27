@@ -462,13 +462,20 @@ def _rmoms2cmoms2D(raw, ave, n, lm, rm, i, j):
   elif lm == 1 and rm == 1:  # E(X Y)
     M_11 = raw[0, :, 0, :]   # 0
     m = M_11[i, j] - n * ave_i * ave_j
-  elif lm == 1 and rm == 2 or lm == 2 and rm == 1:  # E(XX Y)
+  elif lm == 1 and rm == 2:  # E(X YY)
     M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
     m = ave_j * (2 * n * ave_i * ave_j - 2 * M_11[i, j]) \
         - ave_i * M_11[j, j].diagonal() \
         + M_12[i, j]
-  elif lm == 1 and rm == 3 or lm == 3 and rm == 1:  # E(XXX Y)
+  elif lm == 2 and rm == 1:  # E(XX Y)
+    # Mirrored (1, 2): the lower half of the non-symmetric block M_12 holds sum x_i^2 x_j
+    M_11 = raw[0, :, 0, :]   # 0
+    M_12 = raw[0, :, 1, :]
+    m = ave_i * (2 * n * ave_i * ave_j - 2 * M_11[i, j]) \
+        - ave_j * M_11[i, i] \
+        + M_12[j, i]
+  elif lm == 1 and rm == 3:  # E(X YYY)
     M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]
     M_13 = raw[0, :, 2, :]
@@ -476,6 +483,14 @@ def _rmoms2cmoms2D(raw, ave, n, lm, rm, i, j):
                 + ave_j * (3 * M_11[i, j] - 3 * n * ave_i * ave_j)) \
         - ave_i * M_12[j, j].diagonal() \
         + M_13[i, j]
+  elif lm == 3 and rm == 1:  # E(XXX Y)
+    M_11 = raw[0, :, 0, :]   # 0
+    M_12 = raw[0, :, 1, :]
+    M_13 = raw[0, :, 2, :]
+    m = ave_i * (3 * ave_j * M_11[i, i] - 3 * M_12[j, i] \
+                + ave_i * (3 * M_11[i, j] - 3 * n * ave_i * ave_j)) \
+        - ave_j * M_12[i, i] \
+        + M_13[j, i]
   elif lm == 2 and rm == 2:  # E(XX YY)
     M_11 = raw[0, :, 0, :]   # 0
     M_12 = raw[0, :, 1, :]

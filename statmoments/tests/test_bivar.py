@@ -1,6 +1,6 @@
 import pytest
 
-from itertools import combinations_with_replacement as _combu
+from itertools import product as _product
 
 import numpy as np
 import numpy.testing as nt
@@ -53,8 +53,8 @@ def _ensure_comom(eng, traces0, traces1, normalized=True):
   # Test 2D
   max_moment = eng.moment
 
-  # Get list of all possible comoments
-  lmm = list(_combu(range(1, max_moment + 1), r=2))
+  # Get list of all possible comoments, both orders of unequal ones
+  lmm = list(_product(range(1, max_moment + 1), repeat=2))
 
   # Get at once
   ecm = [(calc_comom(traces0, mm, normalized), calc_comom(traces1, mm, normalized)) for mm in lmm]

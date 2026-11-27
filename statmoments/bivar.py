@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from os import path as os_path
-from itertools import combinations_with_replacement as _combu
+from itertools import product as _product
 
 from statmoments.common import save_npy
 from statmoments._statmoments_impl import Bivar
@@ -32,7 +32,7 @@ class BivarCMD(_CliCommon):
     # 2D: cl-comom-01
     max_mm = engine.moment  # max degree in E[(x-a)^lm (x-b)^rm]
     fname_pttrn = os_path.join(dirname, 'comom2d{:04d}_{}_{}')
-    for mm in _combu(range(1, max_mm + 1), r=2):
+    for mm in _product(range(1, max_mm + 1), repeat=2):
       mstr = ''.join(map(str, mm))
       for i, cm in enumerate(engine.comoments(mm)):
         save_npy(fname_pttrn.format(i, mstr, 0), cm[0, 0])
@@ -41,7 +41,7 @@ class BivarCMD(_CliCommon):
     # 2D: cl-tt
     max_mm = engine.moment // 2  # max(lm, rm) in E[(x-a)^lm (x-b)^rm]
     fname_pttrn = os_path.join(dirname, 'tt2d{:04d}_{}')
-    for mm in _combu(range(1, max_mm + 1), r=2):
+    for mm in _product(range(1, max_mm + 1), repeat=2):
       mstr = ''.join(map(str, mm))
       for i, tt in enumerate(ttests(engine, mm)):
         save_npy(fname_pttrn.format(i, mstr), tt)
