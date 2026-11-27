@@ -233,6 +233,23 @@ def test_ttest_2d(kernel2d):
     nt.assert_array_less(5, np.abs(tt4[8]))
 
 
+@pytest.mark.parametrize("kernel2d",
+                         [e for e in eng2d_list if e is not statmoments.bivar_txtbk])
+def test_ttest_2d_high_only(kernel2d):
+  # moment 6 provides t-tests up to (3, 3), including (1, 3), (3, 1), (2, 3), (3, 2)
+  rng = np.random.default_rng(103)
+  tr_len, cl_len = 3, 2
+  n0, n1 = 917, 801
+  traces0 = rng.normal(0, 20, (n0, tr_len))
+  traces1 = rng.normal(0, 20, (n1, tr_len))
+  eng = statmoments.Bivar(tr_len, cl_len, moment=6, kernel=kernel2d)
+
+  eng.update(traces0, [[0, 1]] * n0)
+  eng.update(traces1, ['10'] * n1)
+
+  ensure_ttest_2d(eng, traces0, traces1)
+
+
 @pytest.mark.parametrize("kernel2d", eng2d_list)
 def test_mean_neg(kernel2d):
   # different mean, same variance

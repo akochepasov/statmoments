@@ -34,30 +34,13 @@ def ttests(engine, moment=None, dim=None, equal_var=False):
     emsg = "The engine cannot provide required statistical moments. Increase the engine moment"
     raise ValueError(emsg)
 
-  mom_conv = [
-      {  # Empty
-      },
-      {  # Univariate case
-          1: (1, 2),
-          2: (2, 4),
-          3: (3, 6),
-          4: (4, 8),
-      },
-      {  # Bivariate case
-          1: ((1, 1), (2, 2)),
-          2: ((2, 2), (4, 4)),
-          3: ((3, 3), (6, 6)),
-          4: ((4, 4), (8, 8)),
-          (1, 1): ((1, 1), (2, 2)),
-          (1, 2): ((1, 2), (2, 4)),
-          (2, 1): ((2, 1), (4, 2)),
-          (2, 2): ((2, 2), (4, 4)),
-      }
-  ]
-
   mlist = test_mom
   if isinstance(mlist, int) or isinstance(mlist, tuple):
-    mlist = mom_conv[test_dim][test_mom]
+    # The t-test of order k compares E[Y] and Var[Y] = E[Y^2] - E[Y]^2 for Y = prod (x - mu)^k,
+    # hence it pairs moment k with 2k per sample position, e.g. (1, 2) -> (1, 2), (2, 4)
+    mm = tuple(int(m) for m in np.broadcast_to(test_mom, test_dim))
+    mm2 = tuple(2 * m for m in mm)
+    mlist = (mm[0], mm2[0]) if test_dim == 1 else (mm, mm2)
 
   test_mom = np.broadcast_to(test_mom, test_dim)
   tmd = np.sum(test_mom)
