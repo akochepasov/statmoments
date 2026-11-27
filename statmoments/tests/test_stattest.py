@@ -202,7 +202,11 @@ def test_ttest_1d(kernel1d):
 def test_ttest_2d(kernel2d):
   max_moment = 4
   tr_len, cl_len = 4, 2
-  n0, n1 = 1843, 1934
+  # The weakest signal is (2,2) t-test at the co-dependent pair:
+  # E[z^4] = 3 vs E[z^2 w^2] = 1, with Var(z^4) = 96
+  # so |t| ~ 2 / sqrt(96 / n0) ~ 0.2 * sqrt(n0).
+  # This size of n is chosen to keep it about 11
+  n0, n1 = 3217, 2971
   traces0 = np.random.normal(100, 20, (n0, tr_len))
   traces1 = np.random.normal(100, 20, (n1, tr_len))
   # Insert co-dependence to some point of one batch
