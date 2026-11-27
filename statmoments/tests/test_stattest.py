@@ -1,7 +1,7 @@
 import pytest
 
 import functools
-from itertools import combinations_with_replacement as _combu
+from itertools import product as _product
 
 import numpy as np
 import numpy.testing as nt
@@ -114,7 +114,7 @@ def ensure_ttest_2d(eng, traces0, traces1):
 
   # Test 2D
   max_moment = eng.moment // 2
-  for mm in _combu(range(1, max_moment + 1), r=2):
+  for mm in _product(range(1, max_moment + 1), repeat=2):
     ett = wttest(uni2bivar(traces0, *mm), uni2bivar(traces1, *mm))
     att = [_tt.copy() for _tt in statmoments.stattests.ttests(eng, moment=mm)]
     nt.assert_allclose(att[0], ett, err_msg=f'Error in ttest order {mm}')
