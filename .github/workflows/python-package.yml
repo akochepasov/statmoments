@@ -66,7 +66,8 @@ jobs:
           path: dist/*.tar.gz
           retention-days: 14
 
-  # Compile from the sdist on a clean interpreter, as pip does on platforms without wheels
+  # Compile from the sdist on a clean interpreter, as pip does on platforms without wheels.
+  # Linux wheels are fully tested below, so Linux only checks that the sdist builds and imports.
   test-sdist:
     name: sdist ${{ matrix.python-version }} on ${{ matrix.os }}
     needs: build-sdist
@@ -75,8 +76,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-22.04, python-version: '3.10' }
-          - { os: macos-15,     python-version: '3.12' }
+          - { os: ubuntu-22.04, python-version: '3.10', full-tests: false }
+          - { os: macos-15,     python-version: '3.12', full-tests: true }
     defaults:
       run:
         shell: bash
@@ -97,7 +98,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install "$(ls dist/*.tar.gz)[test]"
 
+      - name: Smoke test installed package
+        if: ${{ !matrix.full-tests }}
+        run: |
+          cd "${RUNNER_TEMP}"
+          python -c "import statmoments, statmoments.univar as uv; uv.Univar(4, 2, moment=2)"
+
       - name: Run tests on installed package
+        if: ${{ matrix.full-tests }}
         run: |
           mkdir -p "${RUNNER_TEMP}/sdist-test"
           cd "${RUNNER_TEMP}/sdist-test"
@@ -134,7 +142,8 @@ jobs:
           path: wheelhouse/*.whl
           retention-days: 14
 
-  # Install the built wheel on a clean interpreter and run the full test suite against it
+  # Install the built wheel on a clean interpreter and run the full test suite against it.
+  # The cp310 wheels are covered by test-min-deps.
   test-wheels:
     name: Test wheel ${{ matrix.python-version }} on ${{ matrix.os }}
     needs: build-wheels
@@ -143,7 +152,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-22.04, windows-2022]
-        python-version: ['3.10', '3.12']
+        python-version: ['3.12']
     defaults:
       run:
         shell: bash
