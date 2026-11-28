@@ -60,7 +60,7 @@ jobs:
           twine check --strict dist/*
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dist-sdist
           path: dist/*.tar.gz
@@ -88,7 +88,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Download sdist
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-sdist
           path: dist
@@ -136,7 +136,7 @@ jobs:
           twine check --strict wheelhouse/*.whl
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dist-wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
@@ -168,7 +168,7 @@ jobs:
           cache: 'pip'
 
       - name: Download wheels
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-wheels-${{ matrix.os }}
           path: dist
@@ -221,7 +221,7 @@ jobs:
           python-version: '3.10'
 
       - name: Download wheels
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: dist-wheels-${{ matrix.os }}
           path: dist
